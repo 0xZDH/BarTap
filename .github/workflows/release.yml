@@ -1,0 +1,98 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers on version tags like v1.0.0
+
+jobs:
+
+  build-and-release:
+    runs-on: macos-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+          
+      - name: Build app
+        run: |
+          xcodebuild -project BarTap.xcodeproj \
+            -scheme BarTap \
+            -configuration Release \
+            -derivedDataPath build/ \
+            -archivePath build/BarTap.xcarchive \
+            archive
+            
+      - name: Export app
+        run: |
+          # Create export options plist
+          cat > build/ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>mac-application</string>
+            <key>destination</key>
+            <string>export</string>
+          </dict>
+          </plist>
+          EOF
+          
+          # Export the archive
+          xcodebuild -exportArchive \
+            -archivePath build/BarTap.xcarchive \
+            -exportPath build/export \
+            -exportOptionsPlist build/ExportOptions.plist
+            
+      - name: Create App Bundle Archive
+        run: |
+          cd build/export
+          zip -r ../BarTap.app.zip BarTap.app
+          
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        
+      # - name: Upload artifacts
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: BarTap
+      #     path: |
+      #       build/export/BarTap.app.zip
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: BarTap ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## BarTap ${{ steps.get_version.outputs.VERSION }}
+            
+            ### Installation
+            1. Download the `BarTap.app.zip` file below
+            2. Unzip the file to extract `BarTap.app`
+            3. **Code Sign the app locally** (required for macOS security to use Accessibility features):
+              - `codesign --deep --force --sign "BarTap" BarTap.app`
+            4. Move `BarTap.app` to your Applications folder
+            5. Launch BarTap from Applications
+            
+            > See [README](https://github.com/0xZDH/BarTap) for more information on signing BarTap.
+            
+            ### Note
+            This app requires local code signing before use. The unsigned app bundle is provided to allow users to sign it with their own certificate.
+            
+            ### Changes
+            - See commit history for detailed changes
+            
+          draft: false
+          prerelease: false
+          files: |
+            build/BarTap.app.zip

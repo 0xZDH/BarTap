@@ -1,0 +1,4 @@
+BarTapBuilds/
+**/*.xcworkspace*
+**/xcuserdata/
+**/.DS_Store
