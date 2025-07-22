@@ -40,10 +40,13 @@ While multiple applications already exist that solve this problem, **BarTap** is
 3. Select 'Distribute App' > 'Custom' > 'Copy App'
 4. Save the app to your local system
 
+> You can also download a pre-built [release](https://github.com/0xZDH/BarTap/releases)
 
 <div align="center">
     <h4>Signing BarTap</h4>
 </div>
+
+> As a personal project, official **BarTap** releases are not signed with an Apple Developer ID to avoid developer program costs.
 
 1. Go to the Keychain Access app on your Mac.
 2. Choose Keychain Access > Certificate Assistant > Create a Certificate.
@@ -70,11 +73,3 @@ While multiple applications already exist that solve this problem, **BarTap** is
     1. On the first run, you will see a security pop-up - navigate to 'System settings' > 'Privacy & Security' > Scroll down to 'BarTap' and allow it to run.
 2. Run **BarTap** again and you will see a permissions request pop-up requesting access to Accessibility features - allow this.
 3. Finally, run **BarTap** again and it should run normally.
-
-
-<div align="center">
-    <h2>TODO</h2>
-</div>
-
-- [x] ~~Implement visual status indicators for apps hidden/obscured by the camera notch or menu bar overflow conditions~~
-- [x] ~~Cache application icons to disk to reduce memory consumption~~

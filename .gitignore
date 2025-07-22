@@ -1,4 +1,27 @@
+# Xcode
+.build/
+build/
+DerivedData/
+*.xccheckout
+*.moved-aside
+*.xcscmblueprint
+*.xcschememanagement
+*.xcscheme
+*.xcuserdata
+xcuserdata/
+*.xcworkspace/
+
+## Obj-C/Swift specific
+*.hmap
+
+## App packaging
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift
+.swiftpm/
+
+
 BarTapBuilds/
-**/*.xcworkspace*
-**/xcuserdata/
 **/.DS_Store
