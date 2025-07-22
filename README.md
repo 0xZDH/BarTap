@@ -70,3 +70,10 @@ While multiple applications already exist that solve this problem, **BarTap** is
     1. On the first run, you will see a security pop-up - navigate to 'System settings' > 'Privacy & Security' > Scroll down to 'BarTap' and allow it to run.
 2. Run **BarTap** again and you will see a permissions request pop-up requesting access to Accessibility features - allow this.
 3. Finally, run **BarTap** again and it should run normally.
+
+
+<div align="center">
+    <h2>TODO</h2>
+</div>
+
+- [ ] Implement visual status indicators for apps hidden/obscured by the camera notch or menu bar overflow conditions
