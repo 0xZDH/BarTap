@@ -9,9 +9,9 @@ While multiple applications already exist that solve this problem, **BarTap** is
 
 
 <div align="center">
-    <img src="Resources/BarTap-Usage1.png" height="35%" width="35%"></img>
+    <img src="Resources/BarTap.png" height="35%" width="35%"></img>
     &nbsp;&nbsp;&nbsp;
-    <img src="Resources/BarTap-Usage2.png" height="35%" width="35%"></img>
+    <img src="Resources/BarTap-Search.png" height="35%" width="35%"></img>
 </div>
 
 

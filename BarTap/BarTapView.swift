@@ -9,14 +9,18 @@ import SwiftUI
 
 struct PopoverView: View {
     @StateObject private var menuBarManager = MenuBarManager()
+    
+    @State private var searchText = ""
+    @FocusState private var isSearchFocused: Bool
+    
     let closePopover: () -> Void
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Header
             HStack {
                 Text("BarTap")
-                .font(.headline)
+                    .font(.headline)
                 
                 Spacer()
                 
@@ -26,25 +30,78 @@ struct PopoverView: View {
                 .disabled(menuBarManager.isScanning)
             }
             
+            // Search Bar
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                    .font(.system(size: 12))
+                
+                TextField("Search apps...", text: $searchText)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12))
+                    .focused($isSearchFocused)
+                
+                // When there is a 'search', add a way to clear the search
+                if !searchText.isEmpty {
+                    Button(action: {
+                        searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 12))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(6)
+            
             Divider()
             
             // Application list
             ScrollView {
-                LazyVStack(spacing: 4) {
-                    ForEach(menuBarManager.detectedApps) { app in
-                        MenuBarAppRow(app: app, manager: menuBarManager)
+                // Display a message to the user if the 'search' failed to
+                // filter any applications
+                if filteredApps.isEmpty && !searchText.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 24))
+                            .foregroundColor(.secondary)
+                        
+                        Text("No apps found")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        
+                        Text("Try a different search term")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Button("Clear Search") {
+                            searchText = ""
+                        }
+                        .buttonStyle(.link)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                } else {
+                    LazyVStack(spacing: 4) {
+                        ForEach(filteredApps) { app in
+                            MenuBarAppRow(app: app, manager: menuBarManager, searchText: searchText)
+                        }
+                    }
+                    .padding(.leading, 4)
+                    .padding(.trailing, 8)
                 }
-                .padding(.leading, 4) // Add leading padding to the entire list
-                .padding(.trailing, 8) // Add trailing padding to the entire list
             }
-            .frame(maxHeight: 400) // Limit the scroll window size
+            .frame(maxHeight: 400)
             
             // Footer
             HStack {
-                Text("\(menuBarManager.detectedApps.count) apps")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                Text(footerText)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 
                 Spacer()
                 
@@ -57,8 +114,35 @@ struct PopoverView: View {
         .padding()
         .frame(width: 300)
         .onAppear {
-            // Initialize app loading on popover display
+            // Scan apps in the background on each popover display
             menuBarManager.refreshApps()
+        }
+    }
+    
+    // MARK: - Dynamic Properties
+    
+    /// Filter apps based on search text
+    private var filteredApps: [MenuBarApp] {
+        if searchText.isEmpty {
+            return menuBarManager.detectedApps
+        }
+        
+        return menuBarManager.detectedApps.filter { app in
+            // Search in app name
+            app.name.localizedCaseInsensitiveContains(searchText) ||
+            // Search in bundle identifier
+            app.bundleIdentifier.localizedCaseInsensitiveContains(searchText)
+        }
+    }
+    
+    /// Dynamic footer text based on search state
+    private var footerText: String {
+        if searchText.isEmpty {
+            return "\(menuBarManager.detectedApps.count) apps"
+        } else {
+            let filteredCount = filteredApps.count
+            let totalCount = menuBarManager.detectedApps.count
+            return "\(filteredCount) of \(totalCount) apps"
         }
     }
 }
@@ -68,6 +152,8 @@ struct PopoverView: View {
 struct MenuBarAppRow: View {
     let app: MenuBarApp
     let manager: MenuBarManager
+    let searchText: String
+    
     @State private var isHovered: Bool = false
     
     var body: some View {
@@ -77,44 +163,23 @@ struct MenuBarAppRow: View {
         }) {
             HStack {
                 // App icon
-                if let sfSymbolName = app.sfSymbolName {
-                    // Support custom imagesets (e.g. Bluetooth)
-                    if sfSymbolName.hasPrefix("custom:") {
-                        let imagesetName = String(sfSymbolName.dropFirst(7)) // Remove "custom:" prefix
-                        Image(imagesetName)
-                            .resizable()
-                            .renderingMode(.template) // Behave like SF Symbols in light/dark mode
-                            .foregroundColor(.primary)
-                            .frame(width: 16, height: 16)
-                    } else {
-                        // Render SF Symbol with proper template behavior
-                        Image(systemName: sfSymbolName)
-                            .font(.system(size: 11, weight: .light))
-                            .foregroundColor(.primary) // Support light/dark mode
-                            .frame(width: 16, height: 16)
-                    }
-                } else if let iconData = app.iconData,
-                          let nsImage = NSImage(data: iconData) {
-                    // Render regular app icon
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .frame(width: 16, height: 16)
-                } else {
-                    // Fallback to generic SF app icon
-                    Image(systemName: "app")
-                        .font(.system(size: 12, weight: .light))
-                        .foregroundColor(.primary)
-                        .frame(width: 16, height: 16)
-                }
+                appIcon
                 
-                // App name
+                // App name and identifier with search highlighting
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(app.name)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.primary)
-                    Text(app.bundleIdentifier)
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
+                    HighlightedText(
+                        text: app.name,
+                        searchText: searchText,
+                        font: .system(size: 12, weight: .medium),
+                        foregroundColor: .primary
+                    )
+                    
+                    HighlightedText(
+                        text: app.bundleIdentifier,
+                        searchText: searchText,
+                        font: .system(size: 10),
+                        foregroundColor: .secondary
+                    )
                 }
                 
                 Spacer()
@@ -124,35 +189,9 @@ struct MenuBarAppRow: View {
                     .fill(app.isRunning ? Color.green : Color.gray)
                     .frame(width: 6, height: 6)
                 
-                // Actions (only show on hover)
+                // Actions
                 if isHovered {
-                    HStack(spacing: 4) {
-                        // Click button
-                        //Button(action: {
-                        //    manager.clickMenuBarApp(app)
-                        //}) {
-                        //    Image(systemName: "hand.tap")
-                        //        .font(.system(size: 10))
-                        //}
-                        //.buttonStyle(.plain)
-                        //.help("Click menu bar item")
-                        
-                        // Quit/Launch button
-                        Button(action: {
-                            if app.isRunning {
-                                manager.quitApp(app)
-                            } else {
-                                manager.launchApp(app)
-                            }
-                        }) {
-                            Image(systemName: app.isRunning ? "xmark.circle" : "play.circle")
-                                .font(.system(size: 14))
-                                .foregroundColor(app.isRunning ? .red : .green)
-                        }
-                        .buttonStyle(.plain)
-                        .help(app.isRunning ? "Quit app" : "Launch app")
-                    }
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    actionButtons
                 }
             }
             .padding(.horizontal, 12)
@@ -160,15 +199,7 @@ struct MenuBarAppRow: View {
             .padding(.trailing, 12)
         }
         .buttonStyle(.plain)
-        .background(
-            // Highlight the app row when 'hovering'
-            RoundedRectangle(cornerRadius: 8)
-                .fill(isHovered ? Color.accentColor.opacity(0.15) : Color.clear)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(isHovered ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
-                )
-        )
+        .background(rowBackground)
         .scaleEffect(isHovered ? 1.02 : 1.0)
         .animation(.easeInOut(duration: 0.10), value: isHovered)
         .onHover { hovering in
@@ -176,24 +207,160 @@ struct MenuBarAppRow: View {
                 isHovered = hovering
             }
         }
-        // Right-click context menu
         .contextMenu {
-            Button("Click Menu Bar Item") {
-                manager.clickMenuBarApp(app)
-            }
-            
-            Divider()
-            
-            Button("Open Application") {
-                manager.launchApp(app)
-            }
-            
-            if app.isRunning {
-                Button("Quit Application") {
-                    manager.quitApp(app)
-                }
-            }
+            contextMenuItems
         }
         .help("Click to trigger \(app.name) menu bar item")
+    }
+    
+    // MARK: - Subviews
+    
+    /// Dynamic app icon generation
+    @ViewBuilder
+    private var appIcon: some View {
+        if let sfSymbolName = app.sfSymbolName {
+            // Use custom images for things like 'Bluetooth'
+            if sfSymbolName.hasPrefix("custom:") {
+                let imagesetName = String(sfSymbolName.dropFirst(7))
+                Image(imagesetName)
+                    .resizable()
+                    .renderingMode(.template)
+                    .foregroundColor(.primary)
+                    .frame(width: 16, height: 16)
+            } else {
+                // For scenarios like Control Center, use an
+                // SF symbol instead of the parent icon
+                Image(systemName: sfSymbolName)
+                    .font(.system(size: 11, weight: .light))
+                    .foregroundColor(.primary)
+                    .frame(width: 16, height: 16)
+            }
+        } else if let iconData = app.iconData,
+                  let nsImage = NSImage(data: iconData) {
+            // Use default application icon
+            Image(nsImage: nsImage)
+                .resizable()
+                .frame(width: 16, height: 16)
+        } else {
+            // Fallback icon if none available
+            Image(systemName: "app")
+                .font(.system(size: 12, weight: .light))
+                .foregroundColor(.primary)
+                .frame(width: 16, height: 16)
+        }
+    }
+    
+    /// Action buttons for focused applications
+    @ViewBuilder
+    private var actionButtons: some View {
+        HStack(spacing: 4) {
+            Button(action: {
+                if app.isRunning {
+                    manager.quitApp(app)
+                } else {
+                    manager.launchApp(app)
+                }
+            }) {
+                Image(systemName: app.isRunning ? "xmark.circle" : "play.circle")
+                    .font(.system(size: 14))
+                    .foregroundColor(app.isRunning ? .red : .green)
+            }
+            .buttonStyle(.plain)
+            .help(app.isRunning ? "Quit app" : "Launch app")
+        }
+        .transition(.opacity.combined(with: .move(edge: .trailing)))
+    }
+    
+    /// Row background of hovered row
+    @ViewBuilder
+    private var rowBackground: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(isHovered ? Color.accentColor.opacity(0.15) : Color.clear)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isHovered ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
+            )
+    }
+    
+    /// Right-click context menu
+    @ViewBuilder
+    private var contextMenuItems: some View {
+        Button("Click Menu Bar Item") {
+            manager.clickMenuBarApp(app)
+        }
+        
+        Divider()
+        
+        Button("Open Application") {
+            manager.launchApp(app)
+        }
+        
+        if app.isRunning {
+            Button("Quit Application") {
+                manager.quitApp(app)
+            }
+        }
+    }
+}
+
+// MARK: - Text Highlighting
+
+struct HighlightedText: View {
+    let text: String
+    let searchText: String
+    let font: Font
+    let foregroundColor: Color
+    
+    var body: some View {
+        if searchText.isEmpty {
+            Text(text)
+                .font(font)
+                .foregroundColor(foregroundColor)
+        } else {
+            Text(highlightedAttributedString)
+                .font(font)
+        }
+    }
+    
+    private var highlightedAttributedString: AttributedString {
+        var attributedString = AttributedString(text)
+        
+        // Find all ranges of the search text (case-insensitive)
+        let ranges = text.ranges(of: searchText, options: .caseInsensitive)
+        
+        for range in ranges.reversed() { // Reverse to maintain correct indices
+            let startIndex = text.distance(from: text.startIndex, to: range.lowerBound)
+            let endIndex = text.distance(from: text.startIndex, to: range.upperBound)
+            
+            let attributedRange = Range(
+                NSRange(location: startIndex, length: endIndex - startIndex),
+                in: attributedString
+            )
+            
+            if let attributedRange = attributedRange {
+                attributedString[attributedRange].backgroundColor = .yellow.opacity(0.3)
+                attributedString[attributedRange].foregroundColor = foregroundColor
+            }
+        }
+        
+        // Set default color for non-highlighted text
+        attributedString.foregroundColor = foregroundColor
+        
+        return attributedString
+    }
+}
+
+/// Helper: String extension
+extension String {
+    func ranges(of searchString: String, options: String.CompareOptions = []) -> [Range<String.Index>] {
+        var ranges: [Range<String.Index>] = []
+        var searchRange = startIndex..<endIndex
+        
+        while let range = range(of: searchString, options: options, range: searchRange) {
+            ranges.append(range)
+            searchRange = range.upperBound..<endIndex
+        }
+        
+        return ranges
     }
 }
