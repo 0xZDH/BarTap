@@ -185,9 +185,20 @@ struct MenuBarAppRow: View {
                 Spacer()
                 
                 // Status indicator
-                Circle()
-                    .fill(app.isRunning ? Color.green : Color.gray)
-                    .frame(width: 6, height: 6)
+                HStack(spacing: 4) {
+                    // Running status
+                    Circle()
+                        .fill(app.isRunning ? Color.green : Color.gray)
+                        .frame(width: 6, height: 6)
+                    
+                    // Visibility status for hidden items
+                    if app.isObscured {
+                        Image(systemName: "eye.slash")
+                            .font(.system(size: 8))
+                            .foregroundColor(.orange)
+                            .help("Hidden/Obscured")
+                    }
+                }
                 
                 // Actions
                 if isHovered {

@@ -76,4 +76,6 @@ While multiple applications already exist that solve this problem, **BarTap** is
     <h2>TODO</h2>
 </div>
 
-- [ ] Implement visual status indicators for apps hidden/obscured by the camera notch or menu bar overflow conditions
+- [x] Implement visual status indicators for apps hidden/obscured by the camera notch or menu bar overflow conditions
+- [ ] Cache the application list to improve popover speed and reduce CPU usage
+- [ ] Cache application icons to disk to reduce memory consumption
