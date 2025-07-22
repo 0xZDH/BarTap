@@ -9,7 +9,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var eventMonitor: Any?
-
+    private let menuBarManager = MenuBarManager()
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Mark application as accessory, do not show in dock
         NSApp.setActivationPolicy(.accessory)
@@ -41,9 +42,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.animates = true
         popover.delegate = self
         popover.contentViewController = NSHostingController(
-            rootView: PopoverView(closePopover: {
-                self.closePopover()
-            })
+            rootView: PopoverView(
+                menuBarManager: menuBarManager,
+                closePopover: {
+                    self.closePopover()
+                }
+            )
         )
     }
     
@@ -60,6 +64,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private func showPopover() {
         // Show the popover relative to the menu bar icon
         if let button = statusItem.button {
+            // Refresh apps when popover is shown, but only do it every 30 seconds
+            // to avoid constant scanning when a user opens/closes the popover frequently
+            if let lastScanned = menuBarManager.lastScannedDate, lastScanned.addingTimeInterval(30) <= Date() {
+                menuBarManager.refreshApps()
+            }
+            
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             
             // Add an event monitor to detect clicks outside of the popover

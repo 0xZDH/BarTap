@@ -8,7 +8,7 @@ import SwiftUI
 // MARK: - Popover View
 
 struct PopoverView: View {
-    @StateObject private var menuBarManager = MenuBarManager()
+    @ObservedObject var menuBarManager: MenuBarManager
     
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
@@ -114,8 +114,10 @@ struct PopoverView: View {
         .padding()
         .frame(width: 300)
         .onAppear {
-            // Scan apps in the background on each popover display
-            menuBarManager.refreshApps()
+            // Scan apps on first appearance only
+            if menuBarManager.detectedApps.isEmpty {
+                menuBarManager.refreshApps()
+            }
         }
     }
     
@@ -137,12 +139,20 @@ struct PopoverView: View {
     
     /// Dynamic footer text based on search state
     private var footerText: String {
+        var lastScanned: String
+        if menuBarManager.isScanning {
+            lastScanned = "🔍 Scanning..."
+        } else {
+            lastScanned = menuBarManager.lastScannedTimestamp
+        }
+        
         if searchText.isEmpty {
-            return "\(menuBarManager.detectedApps.count) apps"
+            return "\(menuBarManager.detectedApps.count) apps | \(lastScanned)"
         } else {
             let filteredCount = filteredApps.count
             let totalCount = menuBarManager.detectedApps.count
-            return "\(filteredCount) of \(totalCount) apps"
+            
+            return "\(filteredCount) of \(totalCount) apps | \(lastScanned)"
         }
     }
 }
@@ -246,9 +256,9 @@ struct MenuBarAppRow: View {
                     .foregroundColor(.primary)
                     .frame(width: 16, height: 16)
             }
-        } else if let iconData = app.iconData,
-                  let nsImage = NSImage(data: iconData) {
-            // Use default application icon
+        // Use the application icon from cached storage
+        } else if let iconPath = app.iconPath,
+                  let nsImage = IconCacheManager.state.getIcon(from: iconPath) {
             Image(nsImage: nsImage)
                 .resizable()
                 .frame(width: 16, height: 16)

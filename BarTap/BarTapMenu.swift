@@ -9,12 +9,11 @@ import SwiftUI
 
 struct MenuBarApp: Identifiable, Codable {
     let id: UUID
-    let bundleIdentifier: String
     let name: String
+    let bundleIdentifier: String
     let processIdentifier: pid_t
-    let iconData: Data?
+    let iconPath: String?     // Path to cached icon
     let sfSymbolName: String? // Icon fallback
-    var lastSeen: Date
     var isObscured: Bool = false
     
     // This can't be Codable, so we'll handle it separately
@@ -30,19 +29,18 @@ struct MenuBarApp: Identifiable, Codable {
     }
     
     // Custom initializer to handle the Date
-    init(id: UUID, bundleIdentifier: String, name: String, processIdentifier: pid_t, iconData: Data?, sfSymbolName: String?) {
+    init(id: UUID, name: String, bundleIdentifier: String, processIdentifier: pid_t, iconPath: String?, sfSymbolName: String?) {
         self.id = id
-        self.bundleIdentifier = bundleIdentifier
         self.name = name
+        self.bundleIdentifier = bundleIdentifier
         self.processIdentifier = processIdentifier
-        self.iconData = iconData
+        self.iconPath = iconPath
         self.sfSymbolName = sfSymbolName
-        self.lastSeen = Date() // Set current date when created
     }
     
     // Custom coding to handle the non-Codable AXUIElement
     enum CodingKeys: String, CodingKey {
-        case id, bundleIdentifier, name, processIdentifier, iconData, sfSymbolName, lastSeen
+        case id, name, bundleIdentifier, processIdentifier, iconPath, sfSymbolName
     }
 }
 
@@ -52,8 +50,20 @@ class MenuBarManager: ObservableObject {
     @Published var detectedApps: [MenuBarApp] = []
     @Published var isScanning: Bool = false
     
+    var lastScannedDate: Date? // Keep public to allow refreshing based on last scanned
+    var lastScannedTimestamp: String {
+        guard let date = lastScannedDate else { return "Last scanned: never" }
+        
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .medium
+        
+        return "Last scanned: \(formatter.string(from: date))"
+    }
+    
     func refreshApps() {
-        isScanning = true
+        isScanning  = true
+        lastScannedDate = Date()
         
         // Async dispatch to scan applications in the background
         DispatchQueue.global(qos: .userInitiated).async {
@@ -94,16 +104,20 @@ class MenuBarManager: ObservableObject {
                         // For applications that have multiple menu bar items, find
                         // the child application name
                         var appTitle:    String
-                        var appIcon:     Data?
+                        var appIconPath: String?
                         var appSFSymbol: String?
                         
                         if app.localizedName == "Control Center" {
                             appTitle    = getMenuBarItemName(child, appName: app.localizedName ?? "Unknown")
-                            appIcon     = app.icon?.tiffRepresentation
+                            if let iconData = app.icon?.tiffRepresentation {
+                                appIconPath = IconCacheManager.state.cacheIcon(iconData: iconData, for: app.bundleIdentifier ?? "unknown-cc-item")
+                            }
                             appSFSymbol = getControlCenterIcon(appName: appTitle)
                         } else {
                             appTitle    = app.localizedName ?? "Unknown"
-                            appIcon     = app.icon?.tiffRepresentation
+                            if let iconData = app.icon?.tiffRepresentation {
+                                appIconPath = IconCacheManager.state.cacheIcon(iconData: iconData, for: app.bundleIdentifier ?? "unknown-app")
+                            }
                             appSFSymbol = nil
                         }
                         
@@ -112,10 +126,10 @@ class MenuBarManager: ObservableObject {
                         
                         var menuBarApp = MenuBarApp(
                             id: UUID(),
-                            bundleIdentifier: appBundleId,
                             name: appTitle,
+                            bundleIdentifier: appBundleId,
                             processIdentifier: app.processIdentifier,
-                            iconData: appIcon,
+                            iconPath: appIconPath,
                             sfSymbolName: appSFSymbol
                         )
                         
