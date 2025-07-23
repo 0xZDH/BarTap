@@ -17,21 +17,22 @@ class IconCacheManager {
         setupCacheDirectory()
     }
     
-    /// Sets up the cache directory `~/.bartap/icons`
+    /// Set up the cache directory in the Application Support directory
     private func setupCacheDirectory() {
-        guard let homeDirectory = fileManager.homeDirectoryForCurrentUser as URL? else {
-            logger.error("Failed to find user home directory.")
+        guard let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            logger.error("Failed to find the Application Support directory.")
             return
         }
         
-        let baseCacheDirectory = homeDirectory.appendingPathComponent(".bartap")
-        let iconDirectory = baseCacheDirectory.appendingPathComponent("icons")
+        let appName = "BarTap"
+        let baseDirectory = appSupportURL.appendingPathComponent(appName)
+        let iconDirectory = baseDirectory.appendingPathComponent("icons")
         
         do {
             try fileManager.createDirectory(at: iconDirectory, withIntermediateDirectories: true, attributes: nil)
             self.iconCacheDirectory = iconDirectory
         } catch {
-            logger.error("Failed to create cache directory: \(error.localizedDescription)")
+            logger.error("Failed to create the cache directory: \(error.localizedDescription)")
         }
     }
     
