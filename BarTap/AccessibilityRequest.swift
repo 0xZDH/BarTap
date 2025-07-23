@@ -7,7 +7,7 @@ import ApplicationServices
 import Cocoa
 import os
 
-private let logger = Logger(subsystem: "com.github.0xZDH.BarTap", category: "AccessibilityRequest")
+private let logger = Logger(subsystem: "io.github.0xZDH.BarTap", category: "AccessibilityRequest")
 
 /// Helper function to check for accessibility access and, if not present, request it
 func requestAccessibilityPermissionIfNeeded() -> Bool {

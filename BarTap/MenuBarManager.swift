@@ -13,7 +13,7 @@ class MenuBarManager: NSObject, ObservableObject {
     @Published var isScanning: Bool = false
     
     private var refreshWorkItem: DispatchWorkItem?
-    private let logger = Logger(subsystem: "com.github.0xZDH.BarTap", category: "MenuBarManager")
+    private let logger = Logger(subsystem: "io.github.0xZDH.BarTap", category: "MenuBarManager")
     
     var lastScannedDate: Date? // Keep public to allow refreshing based on last scanned
     var lastScannedTimestamp: String {

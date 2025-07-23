@@ -11,7 +11,7 @@ class IconCacheManager {
     
     private let fileManager = FileManager.default
     private var iconCacheDirectory: URL?
-    private let logger = Logger(subsystem: "com.github.0xZDH.BarTap", category: "IconCacheManager")
+    private let logger = Logger(subsystem: "io.github.0xZDH.BarTap", category: "IconCacheManager")
     
     private init() {
         setupCacheDirectory()

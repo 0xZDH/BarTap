@@ -3,7 +3,7 @@
 //  BarTap
 //
 // View unified logs for this application:
-//   log stream --level debug --predicate 'subsystem == "com.github.0xZDH.BarTap"'
+//   log stream --level debug --predicate 'subsystem == "io.github.0xZDH.BarTap"'
 
 import SwiftUI
 
