@@ -33,40 +33,40 @@ class IconCacheManager {
         }
     }
     
-    /// Caches icon data and returns the file path
-    /// - Parameters:
-    ///   - iconData: The raw `Data` of the icon to be cached
-    ///   - bundleIdentifier: The bundle identifier of the application, used for unique filenames
-    /// - Returns: An optional `String` containing the path to the cached icon file
-    func cacheIcon(iconData: Data, for bundleIdentifier: String) -> String? {
-        guard let iconCacheDirectory = iconCacheDirectory else {
-            NSLog("❌ Icon cache directory is not available.")
+    /// Caches an application icon and returns the file path
+    /// Instead of caching the full TIFF representation, we first resize the app icon
+    /// as an NSImage and then convert it to a PNG and save the image
+    func cacheIcon(icon: NSImage, for bundleIdentifier: String) -> String? {
+        guard let cacheDir = iconCacheDirectory else { return nil }
+        
+        // Sanitize the bundle identifier to create a valid filename
+        let sanitizedId = bundleIdentifier.replacingOccurrences(of: "[^a-zA-Z0-9-.]", with: "_", options: .regularExpression)
+        let iconURL = cacheDir.appendingPathComponent("\(sanitizedId).png")
+        
+        if fileManager.fileExists(atPath: iconURL.path) {
+            return iconURL.path
+        }
+        
+        // Resize the NSImage to 32x32 for memory efficiency since app icons are displayed
+        // at 16x16
+        guard let resizedIcon = icon.resize(withSize: NSSize(width: 32, height: 32)) else { return nil }
+        
+        // Convert the resized image to PNG data
+        guard let pngData = resizedIcon.PNGRepresentation else {
+            NSLog("❌ Failed to get PNG representation for \(bundleIdentifier)")
             return nil
         }
         
-        // Sanitize the bundle identifier to create a valid filename
-        let sanitizedFilename = bundleIdentifier.replacingOccurrences(of: "[^a-zA-Z0-9.-]", with: "_", options: .regularExpression)
-        let fileURL = iconCacheDirectory.appendingPathComponent("\(sanitizedFilename).png")
-        
-        // Check if the file already exists, skip re-creation
-        let fileExists = fileManager.fileExists(atPath: fileURL.path)
-        if fileExists {
-            return fileURL.path
-        }
-        
-        // Write the app icon data to disk
         do {
-            try iconData.write(to: fileURL)
-            return fileURL.path
+            try pngData.write(to: iconURL, options: .atomic)
+            return iconURL.path
         } catch {
             NSLog("❌ Failed to write icon to cache for \(bundleIdentifier): \(error.localizedDescription)")
             return nil
         }
     }
     
-    /// Loads an `NSImage` from a given file path
-    /// - Parameter path: The file path of the image to load
-    /// - Returns: An optional `NSImage` if loading is successful
+    /// Retrieves a cached icon from the filesystem
     func getIcon(from path: String) -> NSImage? {
         return NSImage(contentsOfFile: path)
     }

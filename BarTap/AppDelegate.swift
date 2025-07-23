@@ -64,12 +64,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private func showPopover() {
         // Show the popover relative to the menu bar icon
         if let button = statusItem.button {
-            // Refresh apps when popover is shown, but only do it every 30 seconds
-            // to avoid constant scanning when a user opens/closes the popover frequently
-            if let lastScanned = menuBarManager.lastScannedDate, lastScanned.addingTimeInterval(30) <= Date() {
-                menuBarManager.refreshApps()
-            }
-            
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             
             // Add an event monitor to detect clicks outside of the popover
