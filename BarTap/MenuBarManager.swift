@@ -121,21 +121,19 @@ extension MenuBarManager {
                         var appSFSymbol: String?
                         
                         if app.localizedName == "Control Center" {
-                            appTitle = getMenuBarItemName(child, appName: app.localizedName ?? "Unknown")
-                            
-                            if let appIcon = app.icon {
-                                appIconPath = IconCacheManager.state.cacheIcon(icon: appIcon, for: app.bundleIdentifier ?? "unknown-cc-app")
-                            }
-                            
+                            appTitle    = getMenuBarItemName(child, appName: app.localizedName ?? "Unknown")
                             appSFSymbol = getControlCenterIcon(appName: appTitle)
-                        } else {
-                            appTitle = app.localizedName ?? "Unknown"
                             
                             if let appIcon = app.icon {
-                                appIconPath = IconCacheManager.state.cacheIcon(icon: appIcon, for: app.bundleIdentifier ?? "unknown-app")
+                                appIconPath = IconCacheManager.state.cacheIcon(icon: appIcon, for: app.bundleIdentifier ?? "unknown-cc-app", from: app.bundleURL)
                             }
-                            
+                        } else {
+                            appTitle    = app.localizedName ?? "Unknown"
                             appSFSymbol = nil
+                            
+                            if let appIcon = app.icon {
+                                appIconPath = IconCacheManager.state.cacheIcon(icon: appIcon, for: app.bundleIdentifier ?? "unknown-app", from: app.bundleURL)
+                            }
                         }
                         
                         let appIsObscured = isMenuBarItemObscured(child, appMenuBoundaryX: appMenuBoundaryX)

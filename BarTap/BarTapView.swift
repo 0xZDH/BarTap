@@ -224,9 +224,7 @@ struct MenuBarAppRow: View {
         .scaleEffect(isHovered ? 1.02 : 1.0)
         .animation(.easeInOut(duration: 0.10), value: isHovered)
         .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.10)) {
-                isHovered = hovering
-            }
+            isHovered = hovering
         }
         .contextMenu {
             contextMenuItems

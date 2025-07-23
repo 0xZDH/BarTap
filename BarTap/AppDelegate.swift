@@ -51,8 +51,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         )
     }
     
+    func applicationWillTerminate(_ aNotification: Notification) {
+        // Ensure the event monitor is properly cleaned up on quit
+        if let eventMonitor = eventMonitor {
+            NSEvent.removeMonitor(eventMonitor)
+        }
+    }
+    
     /// When clicking the menu bar icon, toggle the popover on and off
-    @objc func togglePopover(_ sender: AnyObject?) {
+    @objc private func togglePopover(_ sender: AnyObject?) {
         if popover.isShown {
             closePopover()
         } else {
