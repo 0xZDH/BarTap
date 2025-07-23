@@ -158,7 +158,7 @@ func getControlCenterIcon(appName: String) -> String? {
 
 /// Check if a menu bar icon is either hidden from the layout OR obscured by the
 /// active app's menu
-func isMenuBarItemObscured(_ axElement: AXUIElement) -> Bool {
+func isMenuBarItemObscured(_ axElement: AXUIElement, appMenuBoundaryX: CGFloat?) -> Bool {
     // Get the frame of the icon itself
     guard let iconFrame = getElementFrame(axElement) else { return true }
     
@@ -167,9 +167,8 @@ func isMenuBarItemObscured(_ axElement: AXUIElement) -> Bool {
         return true
     }
     
-    // Get the precise rightmost boundary of the active application's menu.
-    guard let appMenuBoundaryX = getActiveAppMenuBoundaryX() else {
-        // If we can't determine the boundary, assume the icon is visible
+    // If we couldn't determine the boundary, assume the icon is visible
+    guard let appMenuBoundaryX = appMenuBoundaryX else {
         return false
     }
     
@@ -207,7 +206,7 @@ private func getElementFrame(_ axElement: AXUIElement) -> CGRect? {
 }
 
 /// Find the rightmost coordinate (maxX) of the frontmost application's menu bar
-private func getActiveAppMenuBoundaryX() -> CGFloat? {
+func getActiveAppMenuBoundaryX() -> CGFloat? {
     // Get the frontmost application's accessibility element
     guard let frontmostApp = NSWorkspace.shared.frontmostApplication else { return nil }
     let appElement = AXUIElementCreateApplication(frontmostApp.processIdentifier)

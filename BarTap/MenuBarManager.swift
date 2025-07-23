@@ -89,8 +89,11 @@ extension MenuBarManager {
     /// Scan the menu bar for applications using the Accessibility API
     private func scanForMenuBarApps() -> [MenuBarApp] {
         var foundApps: [MenuBarApp] = []
-        
         let runningApps = NSWorkspace.shared.runningApplications
+        
+        // Calculate the frontmost app's menu boundary ONCE before the loop
+        // to avoid recalculating it for every single menu item
+        let appMenuBoundaryX = getActiveAppMenuBoundaryX()
         
         for app in runningApps {
             guard app.activationPolicy == .accessory || app.activationPolicy == .regular else { continue }
@@ -103,7 +106,8 @@ extension MenuBarManager {
             let extrasMenuBarResult = AXUIElementCopyAttributeValue(appElement, "AXExtrasMenuBar" as CFString, &extrasMenuBarRaw)
             
             if extrasMenuBarResult == .success, let extrasMenuBarValue = extrasMenuBarRaw {
-                let extrasMenuBarElement = unsafeBitCast(extrasMenuBarValue, to: AXUIElement.self)
+                //let extrasMenuBarElement = unsafeBitCast(extrasMenuBarValue, to: AXUIElement.self)
+                let extrasMenuBarElement = extrasMenuBarValue as! AXUIElement
                 
                 // Get the menu bar items for this app -> Some applications have several
                 // (e.g. Control Center)
@@ -134,7 +138,7 @@ extension MenuBarManager {
                             appSFSymbol = nil
                         }
                         
-                        let appIsObscured = isMenuBarItemObscured(child)
+                        let appIsObscured = isMenuBarItemObscured(child, appMenuBoundaryX: appMenuBoundaryX)
                         let appBundleId   = getMenuBarBundleIdentifier(child, bundleIdentifier: app.bundleIdentifier ?? "unknown")
                         
                         var menuBarApp = MenuBarApp(
