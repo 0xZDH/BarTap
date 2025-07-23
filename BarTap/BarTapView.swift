@@ -113,12 +113,6 @@ struct PopoverView: View {
         }
         .padding()
         .frame(width: 300)
-        .onAppear {
-            // Scan apps on first appearance only
-            if menuBarManager.detectedApps.isEmpty {
-                menuBarManager.refreshApps()
-            }
-        }
     }
     
     // MARK: - Dynamic Properties
@@ -369,7 +363,7 @@ struct HighlightedText: View {
     }
 }
 
-/// Helper: String extension
+/// String extension of range()
 extension String {
     func ranges(of searchString: String, options: String.CompareOptions = []) -> [Range<String.Index>] {
         var ranges: [Range<String.Index>] = []

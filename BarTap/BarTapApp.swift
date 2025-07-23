@@ -2,16 +2,8 @@
 //  BarTapApp.swift
 //  BarTap
 //
-
-/*
-
- View NSLog() logging:
-   log show --predicate 'process == "BarTap"' --style syslog --last 10m
-
- Codesign:
-   codesign --deep --force --sign "BarTapDev" BarTapBuilds/BarTap/BarTap.app
-
- */
+// View unified logs for this application:
+//   log stream --level debug --predicate 'subsystem == "com.github.0xZDH.BarTap"'
 
 import SwiftUI
 

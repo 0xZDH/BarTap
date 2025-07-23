@@ -49,6 +49,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                 }
             )
         )
+        
+        // On application load, perform initial app scan
+        if menuBarManager.detectedApps.isEmpty {
+            menuBarManager.refreshApps()
+        }
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {

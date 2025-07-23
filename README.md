@@ -3,10 +3,9 @@
     <h1>BarTap</h1>
 </div>
 
-**BarTap** is a minimal MacOS utility solely meant to provide access to menu bar applications during scenarios where the camera notch obscures them.
+**BarTap** is a minimal macOS utility to access menu bar items that have been hidden or obscured.
 
-While multiple applications already exist that solve this problem, **BarTap** is designed to be incredibly lightweight and minimal in its permission requirements.
-
+While other applications exist that solve this problem, **BarTap** is designed to be lightweight, fast, and require minimal permissions.
 
 <div align="center">
     <img src="Resources/BarTap.png" height="35%" width="35%"></img>
@@ -16,60 +15,79 @@ While multiple applications already exist that solve this problem, **BarTap** is
 
 
 <div align="center">
+    <h2>Installation</h2>
+</div>
+
+<div align="center">
+    <h4>Pre-built releases</h4>
+</div>
+
+You can download the latest pre-built release from the [releases page](https://github.com/0xZDH/BarTap/releases).
+
+<div align="center">
+    <h4>Building the app from source</h4>
+</div>
+
+If you prefer to build **BarTap** yourself, follow these steps:
+
+**Prerequisites:**
+*   Xcode
+
+**1. Build BarTap**
+1.  Open the `BarTap.xcodeproj` file in Xcode.
+2.  Go to **Product** > **Archive**.
+3.  In the Archives window, select **Distribute App** > **Custom** > **Copy App**.
+4.  Save `BarTap.app` to your system.
+
+<div align="center">
+    <h4>Signing the app</h4>
+</div>
+
+> As this is a personal project, official **BarTap** releases are not signed with an Apple Developer ID to avoid developer program costs. You can sign it locally with a self-signed certificate.
+
+1.  Open the **Keychain Access** app.
+2.  Go to **Keychain Access** > **Certificate Assistant** > **Create a Certificate...**.
+3.  Use the following settings:
+    *   **Name:** `BarTapCert`
+    *   **Identity Type:** `Self Signed Root`
+    *   **Certificate Type:** `Code Signing`
+4.  After the certificate is created, trust the new certificate:
+    *   Right-click the certificate in Keychain Access and select **Get Info**.
+    *   Expand the **Trust** section.
+    *   Set **When using this certificate** to **Always Trust**.
+5.  Sign the application using the following command:
+    ```sh
+    codesign --deep --force --sign "BarTapCert" /path/to/BarTap.app
+    ```
+
+<div align="center">
+    <h4>Running the app for the first time</h4>
+</div>
+
+When you run **BarTap** for the first time, macOS will ask for permissions.
+
+1.  **Allow the app to run:** The first time you open **BarTap**, a security pop-up will appear. Go to **System Settings** > **Privacy & Security**, scroll down, and allow **BarTap** to run.
+2.  **Grant Accessibility permissions:** Run **BarTap** again. A prompt will ask for Accessibility access. This is required for **BarTap** to interact with other menu bar apps - allow it.
+
+<div align="center">
     <h2>Usage</h2>
 </div>
 
-1. On the first run of **BarTap**, all current applications in the menu bar will be cataloged and presented in the popover view.
-2. From here, a user can do several actions:
-    1. Left-click the application name to simulate clicking the applications menu bar icon.
-    2. When hovering over an application, a 'stop application' button will appear on the right. If clicked, this will stop the applications process.
-    3. Right-click the application to display a context menu with three options: Click Menu Bar, Open Application, Close Application.
-3. If any new running applications are not present in the menu, click the 'Refresh' button at the top right.
-
-
-<div align="center">
-    <h2>Building, Installing, and Signing</h2>
-</div>
+1.  On launch, **BarTap** will catalog all applications currently in your menu bar.
+2.  You can perform several actions:
+    *   **Left-click** an application to simulate a click on its menu bar icon.
+    *   **Hover** over an application to reveal a button to quit that application.
+    *   **Right-click** an application for a context menu with more options.
+3.  Click the **Refresh** button to find any new menu bar apps started after **BarTap** was launched (*this is a manual fallback as new apps are detected automatically by **BarTap***).
 
 <div align="center">
-    <h4>Building BarTap from the source</h4>
+    <h2>Contributing</h2>
 </div>
 
-1. Open the project file (`xcodeproj`) in XCode
-2. Go to Product > Archive
-3. Select 'Distribute App' > 'Custom' > 'Copy App'
-4. Save the app to your local system
-
-> You can also download a pre-built [release](https://github.com/0xZDH/BarTap/releases)
+Contributions are more than welcome! Feel free to open an issue for bug reports or feature requests.
 
 <div align="center">
-    <h4>Signing BarTap</h4>
+    <h2>License</h2>
 </div>
 
-> As a personal project, official **BarTap** releases are not signed with an Apple Developer ID to avoid developer program costs.
-
-1. Go to the Keychain Access app on your Mac.
-2. Choose Keychain Access > Certificate Assistant > Create a Certificate.
-3. Specify the following details:
-    1. Name: `BarTapDev`
-    2. Identity Type: `Self Signed Root`
-    3. Certificate Type: `Code Signing`
-4. Now that the certificate is created, you need to trust it
-    1. Right-click the 'certificate' in Keychain Access
-    2. Select 'Get Info' and expand the 'Trust' dropdown
-    3. Set 'When using this certificate' to 'Always Trust'
-    4. Exit the modal to save the settings
-5. Now the certificate exists and is trusted for code signing, sign the application
-  - `codesign --deep --force --sign "BarTapDev" BarTap.app`
-
-> When you launch BarTap for the first time, a permissions prompt will trigger to allow BarTap access to Accessibility.
-
-
-<div align="center">
-    <h4>Running BarTap</h4>
-</div>
-
-1. Run the **BarTap** application
-    1. On the first run, you will see a security pop-up - navigate to 'System settings' > 'Privacy & Security' > Scroll down to 'BarTap' and allow it to run.
-2. Run **BarTap** again and you will see a permissions request pop-up requesting access to Accessibility features - allow this.
-3. Finally, run **BarTap** again and it should run normally.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

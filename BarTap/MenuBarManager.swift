@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import os
 
 /// Menu bar manager to handle scanning for applications and storing
 /// them in-memory
@@ -12,6 +13,7 @@ class MenuBarManager: NSObject, ObservableObject {
     @Published var isScanning: Bool = false
     
     private var refreshWorkItem: DispatchWorkItem?
+    private let logger = Logger(subsystem: "com.github.0xZDH.BarTap", category: "MenuBarManager")
     
     var lastScannedDate: Date? // Keep public to allow refreshing based on last scanned
     var lastScannedTimestamp: String {
@@ -177,7 +179,7 @@ extension MenuBarManager {
     /// Handler to provide a 'click simulation'
     func clickMenuBarApp(_ app: MenuBarApp) {
         guard let axElement = app.axElement else {
-            NSLog("❌ No accessibility element stored for \(app.name)")
+            logger.error("No accessibility element stored for \(app.name)")
             return
         }
         
@@ -185,7 +187,6 @@ extension MenuBarManager {
         let pressResult = AXUIElementPerformAction(axElement, kAXPressAction as CFString)
         
         if pressResult == .success {
-            NSLog("✅ Successfully clicked \(app.name)")
             return
         }
         
@@ -202,19 +203,18 @@ extension MenuBarManager {
         for action in actionsToTry {
             let result = AXUIElementPerformAction(axElement, action)
             if result == .success {
-                NSLog("✅ Successfully performed action '\(action)' on \(app.name)")
                 return
             }
         }
         
-        NSLog("❌ Failed to interact with \(app.name) - no valid actions worked")
+        logger.error("Failed to interact with \(app.name) - no valid actions worked")
         
         // Debug: List available actions using the correct API
         var actionsRaw: CFArray?
         let actionsResult = AXUIElementCopyActionNames(axElement, &actionsRaw)
         
         if actionsResult == .success, let actions = actionsRaw as? [String] {
-            NSLog("🔍 Available actions for \(app.name): \(actions)")
+            logger.debug("Available actions for \(app.name): \(actions)")
         }
     }
 }

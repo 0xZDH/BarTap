@@ -4,12 +4,14 @@
 //
 
 import SwiftUI
+import os
 
 class IconCacheManager {
     static let state = IconCacheManager() // Shared state
     
     private let fileManager = FileManager.default
     private var iconCacheDirectory: URL?
+    private let logger = Logger(subsystem: "com.github.0xZDH.BarTap", category: "IconCacheManager")
     
     private init() {
         setupCacheDirectory()
@@ -18,7 +20,7 @@ class IconCacheManager {
     /// Sets up the cache directory `~/.bartap/icons`
     private func setupCacheDirectory() {
         guard let homeDirectory = fileManager.homeDirectoryForCurrentUser as URL? else {
-            NSLog("❌ Failed to find user home directory.")
+            logger.error("Failed to find user home directory.")
             return
         }
         
@@ -29,7 +31,7 @@ class IconCacheManager {
             try fileManager.createDirectory(at: iconDirectory, withIntermediateDirectories: true, attributes: nil)
             self.iconCacheDirectory = iconDirectory
         } catch {
-            NSLog("❌ Failed to create cache directory: \(error.localizedDescription)")
+            logger.error("Failed to create cache directory: \(error.localizedDescription)")
         }
     }
     
@@ -67,7 +69,7 @@ class IconCacheManager {
         
         // Convert the resized image to PNG data
         guard let pngData = resizedIcon.PNGRepresentation else {
-            NSLog("❌ Failed to get PNG representation for \(bundleIdentifier)")
+            logger.error("Failed to get PNG representation for \(bundleIdentifier)")
             return nil
         }
         
@@ -75,7 +77,7 @@ class IconCacheManager {
             try pngData.write(to: iconURL, options: .atomic)
             return iconURL.path
         } catch {
-            NSLog("❌ Failed to write icon to cache for \(bundleIdentifier): \(error.localizedDescription)")
+            logger.error("Failed to write icon to cache for \(bundleIdentifier): \(error.localizedDescription)")
             return nil
         }
     }
