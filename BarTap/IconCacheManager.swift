@@ -36,6 +36,32 @@ class IconCacheManager {
         }
     }
     
+    /// Check if an app icon has already been cached and determine if it has become stale
+    func getCachedIcon(for bundleIdentifier: String, appURL: URL?) -> String? {
+        guard let cacheDir = iconCacheDirectory else { return nil }
+        
+        // Sanitize the bundle identifier to create a valid filename
+        let sanitizedId = bundleIdentifier.replacingOccurrences(of: "[^a-zA-Z0-9-.]", with: "_", options: .regularExpression)
+        let iconURL = cacheDir.appendingPathComponent("\(sanitizedId).png")
+        
+        if fileManager.fileExists(atPath: iconURL.path) {
+            // If the app bundle URL isn't available, we skip the staleness check
+            // and assume the cache is good
+            guard let appURL = appURL,
+                  let appModDate  = getModificationDate(for: appURL),
+                  let iconModDate = getModificationDate(for: iconURL) else {
+                return iconURL.path
+            }
+            
+            if appModDate <= iconModDate {
+                return iconURL.path
+            }
+        }
+        
+        // If the cache file doesn't exist or is stale, return nil
+        return nil
+    }
+    
     /// Caches an application icon and returns the file path
     /// Instead of caching the full TIFF representation, we first resize the app icon
     /// as an NSImage and then convert it to a PNG and save the image
@@ -45,24 +71,6 @@ class IconCacheManager {
         // Sanitize the bundle identifier to create a valid filename
         let sanitizedId = bundleIdentifier.replacingOccurrences(of: "[^a-zA-Z0-9-.]", with: "_", options: .regularExpression)
         let iconURL = cacheDir.appendingPathComponent("\(sanitizedId).png")
-        
-        // If a cached icon exists, check if it's stale by comparing modification dates
-        if fileManager.fileExists(atPath: iconURL.path) {
-            // Compare the apps modification date to the cached icon
-            // creation date
-            guard let appBundleURL = appBundleURL,
-                  let appModDate   = getModificationDate(for: appBundleURL),
-                  let iconModDate  = getModificationDate(for: iconURL) else {
-                return iconURL.path
-            }
-            
-            // If the icon was created/modified more recently than the application,
-            // assume it's fresh and return the file path
-            // Otherwise, continue and refresh the app icon cache
-            if appModDate <= iconModDate {
-                return iconURL.path
-            }
-        }
         
         // Resize the NSImage to 32x32 for memory efficiency since app icons are displayed
         // at 16x16

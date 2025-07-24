@@ -44,8 +44,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.contentViewController = NSHostingController(
             rootView: PopoverView(
                 menuBarManager: menuBarManager,
-                closePopover: {
-                    self.closePopover()
+                closePopover: { [weak self] in
+                    self?.closePopover()
                 }
             )
         )

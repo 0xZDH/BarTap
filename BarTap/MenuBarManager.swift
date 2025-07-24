@@ -123,23 +123,31 @@ extension MenuBarManager {
                         var appSFSymbol: String?
                         
                         if app.localizedName == "Control Center" {
-                            appTitle    = getMenuBarItemName(child, appName: app.localizedName ?? "Unknown")
+                            appTitle = getMenuBarItemName(child, appName: app.localizedName ?? "Unknown")
                             appSFSymbol = getControlCenterIcon(appName: appTitle)
                             
-                            if let appIcon = app.icon {
-                                appIconPath = IconCacheManager.state.cacheIcon(icon: appIcon, for: app.bundleIdentifier ?? "unknown-cc-app", from: app.bundleURL)
+                            // Check the cache first to avoid accessing tha app .icon if possible
+                            let appBundleId = app.bundleIdentifier ?? "unknown-cc-app"
+                            appIconPath = IconCacheManager.state.getCachedIcon(for: appBundleId, appURL: app.bundleURL)
+                            
+                            if appIconPath == nil, let appIcon = app.icon {
+                                appIconPath = IconCacheManager.state.cacheIcon(icon: appIcon, for: appBundleId, from: app.bundleURL)
                             }
                         } else {
-                            appTitle    = app.localizedName ?? "Unknown"
+                            appTitle = app.localizedName ?? "Unknown"
                             appSFSymbol = nil
                             
-                            if let appIcon = app.icon {
-                                appIconPath = IconCacheManager.state.cacheIcon(icon: appIcon, for: app.bundleIdentifier ?? "unknown-app", from: app.bundleURL)
+                            // Check the cache first to avoid accessing tha app .icon if possible
+                            let appBundleId = app.bundleIdentifier ?? "unknown-app"
+                            appIconPath = IconCacheManager.state.getCachedIcon(for: appBundleId, appURL: app.bundleURL)
+                            
+                            if appIconPath == nil, let appIcon = app.icon {
+                                appIconPath = IconCacheManager.state.cacheIcon(icon: appIcon, for: appBundleId, from: app.bundleURL)
                             }
                         }
                         
                         let appIsObscured = isMenuBarItemObscured(child, appMenuBoundaryX: appMenuBoundaryX)
-                        let appBundleId   = getMenuBarBundleIdentifier(child, bundleIdentifier: app.bundleIdentifier ?? "unknown")
+                        let appBundleId = getMenuBarBundleIdentifier(child, bundleIdentifier: app.bundleIdentifier ?? "unknown")
                         
                         var menuBarApp = MenuBarApp(
                             id: UUID(),
@@ -152,7 +160,7 @@ extension MenuBarManager {
                         
                         // Store the accessibility element for later interaction
                         menuBarApp.isObscured = appIsObscured
-                        menuBarApp.axElement  = child
+                        menuBarApp.axElement = child
                         foundApps.append(menuBarApp)
                     }
                 }
