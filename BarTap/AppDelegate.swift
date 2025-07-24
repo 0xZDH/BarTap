@@ -4,11 +4,14 @@
 //
 
 import SwiftUI
+import Carbon
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var eventMonitor: Any?
+    private var hotKeyRef: EventHotKeyRef?
+    
     private let menuBarManager = MenuBarManager()
     
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -50,6 +53,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             )
         )
         
+        // Register the global hotkey once the popover view has been created
+        registerHotkey()
+        
         // On application load, perform initial app scan
         if menuBarManager.detectedApps.isEmpty {
             menuBarManager.refreshApps()
@@ -57,14 +63,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {
-        // Ensure the event monitor is properly cleaned up on quit
+        // Ensure the event monitors are properly cleaned up on quit
         if let eventMonitor = eventMonitor {
             NSEvent.removeMonitor(eventMonitor)
         }
+        
+        if let hotKeyRef = self.hotKeyRef {
+            UnregisterEventHotKey(hotKeyRef)
+        }
     }
     
-    /// When clicking the menu bar icon, toggle the popover on and off
-    @objc private func togglePopover(_ sender: AnyObject?) {
+    /// Toggle the popover view on and off
+    @objc func togglePopover(_ sender: AnyObject?) {
         if popover.isShown {
             closePopover()
         } else {
@@ -80,6 +90,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             
             // Add an event monitor to detect clicks outside of the popover
             // (backup for .transient behavior)
+            // Only enable the event monitor when the popover is actively showing
             eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) {
                 [weak self] event in
                 if let strongSelf = self, strongSelf.popover.isShown {
@@ -98,5 +109,45 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             NSEvent.removeMonitor(eventMonitor)
             self.eventMonitor = nil
         }
+    }
+    
+    /// Register the global hotkey with the Carbon Event Manager
+    private func registerHotkey() {
+        let hotKeyId = EventHotKeyID(signature: "btap".fourCharCode, id: 1)
+        
+        // Define the hotkey combination
+        // ctrl + shift + \
+        let keyCode = UInt32(kVK_ANSI_Backslash)
+        let modifiers = UInt32(controlKey | shiftKey)
+        
+        // Register the hotkey
+        var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: OSType(kEventHotKeyPressed))
+        
+        // Pass a pointer to the current AppDelegate to the event handler
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        
+        var eventHandlerRef: EventHandlerRef? = nil
+        InstallEventHandler(GetEventDispatcherTarget(), hotKeyHandler, 1, &eventType, selfPtr, &eventHandlerRef)
+        
+        // Register the hotkey and save the reference to later unregister it
+        RegisterEventHotKey(keyCode, modifiers, hotKeyId, GetApplicationEventTarget(), 0, &hotKeyRef)
+    }
+}
+
+/// Handle hotkey events
+private func hotKeyHandler(eventHandlerCall: EventHandlerCallRef?, event: EventRef?, userData: UnsafeMutableRawPointer?) -> OSStatus {
+    // Extract the AppDelegate instance that we passed in as a self pointer
+    guard let userData = userData else { return noErr }
+    let appDelegate = Unmanaged<AppDelegate>.fromOpaque(userData).takeUnretainedValue()
+    
+    appDelegate.togglePopover(nil)
+    
+    return noErr
+}
+
+/// Convert a four-character string into the `OSType` format required by Carbon
+extension String {
+    var fourCharCode: FourCharCode {
+        return self.utf16.reduce(0, {$0 << 8 + FourCharCode($1)})
     }
 }
