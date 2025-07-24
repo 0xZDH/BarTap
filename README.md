@@ -89,11 +89,18 @@ When you run **BarTap** for the first time, macOS will ask for permissions.
     *   **Right-click** an application for a context menu with more options.
 3.  Click the **Refresh** button to find any new menu bar apps started after **BarTap** was launched (*this is a manual fallback as new apps are detected automatically by **BarTap***).
 
+**BarTap** registers a global hotkey `Ctrl + Shift + \` to toggle the popover view.
+
+> [!NOTE]
+> The hotkey is currently not configurable. To keep **BarTap** lightweight, it implements a simple hotkey handler using the native `Carbon` API, avoiding third-party dependencies.
+
+
 <div align="center">
     <h2>Contributing</h2>
 </div>
 
 Contributions are more than welcome! Feel free to open an issue for bug reports or feature requests.
+
 
 <div align="center">
     <h2>License</h2>
