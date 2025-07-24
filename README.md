@@ -22,7 +22,16 @@ While other applications exist that solve this problem, **BarTap** is designed t
     <h4>Pre-built releases</h4>
 </div>
 
-You can download the latest pre-built release from the [releases page](https://github.com/0xZDH/BarTap/releases).
+1. Navigate to the [releases page](https://github.com/0xZDH/BarTap/releases)
+2. Expand 'assets' under the version you want and download `BarTap.app.zip`
+3. Once downloaded, unzip `BarTap.app.zip`
+4. Sign `BarTap.app` (see 'Signing BarTap' below)
+5. Make BarTap executable (`chmod +x BarTap.app/Contents/MacOS/BarTap`)
+
+The GitHub workflow uses two external action images:
+
+- maxim-lobanov/setup-xcode@v1
+- softprops/action-gh-release@v1
 
 <div align="center">
     <h4>Building the app from source</h4>
