@@ -7,12 +7,17 @@ import SwiftUI
 import Carbon
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
+    // Views
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
-    private var eventMonitor: Any?
-    private var hotKeyRef: EventHotKeyRef?
+    private var settingsWindow: NSWindow!
     
+    // Events
+    private var eventMonitor: Any?
+    
+    // Managers
     private let menuBarManager = MenuBarManager()
+    private let hotkeyManager = GlobalHotkeyManager()
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Mark application as accessory, do not show in dock
@@ -39,22 +44,47 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             button.action = #selector(togglePopover(_:))
         }
         
-        // Create SwiftUI-based popover
+        // Create the SwiftUI-based popover
         popover = NSPopover()
         popover.behavior = .transient // This should close when clicking outside the window
         popover.animates = true
         popover.delegate = self
         popover.contentViewController = NSHostingController(
             rootView: PopoverView(
+                // Managers
                 menuBarManager: menuBarManager,
+                
+                // Event closures
                 closePopover: { [weak self] in
                     self?.closePopover()
+                },
+                openSettings: { [weak self] in
+                    self?.openSettings()
                 }
             )
         )
         
+        // Register the hotkey event closure
+        hotkeyManager.hotkeyEvent = { [weak self] in
+            self?.togglePopover(nil)
+        }
+        hotkeyManager.setup() // Initialize the hotkey event handler
+        
         // Register the global hotkey once the popover view has been created
-        registerHotkey()
+        // and the event handler is established
+        if let savedHotkey = hotkeyManager.loadHotkey() {
+            // Load from UserDefaults
+            hotkeyManager.register(hotkey: savedHotkey)
+        } else {
+            // Default hotkey: ctrl + shift + |
+            let defaultHotkey = Hotkey(
+                keys: ["|"],
+                keyCode: UInt32(124), // vertical bar (|)
+                modifiers: UInt32(controlKey | shiftKey)
+            )
+            hotkeyManager.saveHotkey(defaultHotkey) // Save default on first run
+            hotkeyManager.register(hotkey: defaultHotkey)
+        }
         
         // On application load, perform initial app scan
         if menuBarManager.detectedApps.isEmpty {
@@ -66,10 +96,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         // Ensure the event monitors are properly cleaned up on quit
         if let eventMonitor = eventMonitor {
             NSEvent.removeMonitor(eventMonitor)
-        }
-        
-        if let hotKeyRef = self.hotKeyRef {
-            UnregisterEventHotKey(hotKeyRef)
         }
     }
     
@@ -111,43 +137,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         }
     }
     
-    /// Register the global hotkey with the Carbon Event Manager
-    private func registerHotkey() {
-        let hotKeyId = EventHotKeyID(signature: "btap".fourCharCode, id: 1)
+    /// Open the hotkey settings window, build if nil
+    func openSettings() {
+        if settingsWindow == nil {
+            let settingsView = HotkeySettingsView(hotkeyManager: hotkeyManager)
+            settingsWindow = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            settingsWindow?.center()
+            settingsWindow?.setFrameAutosaveName("HotkeySettings")
+            settingsWindow?.isReleasedWhenClosed = false
+            settingsWindow?.contentView = NSHostingView(rootView: settingsView)
+        }
         
-        // Define the hotkey combination
-        // ctrl + shift + \
-        let keyCode = UInt32(kVK_ANSI_Backslash)
-        let modifiers = UInt32(controlKey | shiftKey)
-        
-        // Register the hotkey
-        var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: OSType(kEventHotKeyPressed))
-        
-        // Pass a pointer to the current AppDelegate to the event handler
-        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
-        
-        var eventHandlerRef: EventHandlerRef? = nil
-        InstallEventHandler(GetEventDispatcherTarget(), hotKeyHandler, 1, &eventType, selfPtr, &eventHandlerRef)
-        
-        // Register the hotkey and save the reference to later unregister it
-        RegisterEventHotKey(keyCode, modifiers, hotKeyId, GetApplicationEventTarget(), 0, &hotKeyRef)
-    }
-}
-
-/// Handle hotkey events
-private func hotKeyHandler(eventHandlerCall: EventHandlerCallRef?, event: EventRef?, userData: UnsafeMutableRawPointer?) -> OSStatus {
-    // Extract the AppDelegate instance that we passed in as a self pointer
-    guard let userData = userData else { return noErr }
-    let appDelegate = Unmanaged<AppDelegate>.fromOpaque(userData).takeUnretainedValue()
-    
-    appDelegate.togglePopover(nil)
-    
-    return noErr
-}
-
-/// Convert a four-character string into the `OSType` format required by Carbon
-extension String {
-    var fourCharCode: FourCharCode {
-        return self.utf16.reduce(0, {$0 << 8 + FourCharCode($1)})
+        settingsWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
