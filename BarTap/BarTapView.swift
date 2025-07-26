@@ -14,6 +14,7 @@ struct PopoverView: View {
     @FocusState private var isSearchFocused: Bool
     
     let closePopover: () -> Void
+    let openSettings: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -21,6 +22,17 @@ struct PopoverView: View {
             HStack {
                 Text("BarTap")
                     .font(.headline)
+                
+                Button(action: {
+                    openSettings()
+                    closePopover()
+                }) {
+                    Image(systemName: "gear")
+                        .font(.system(size: 11, weight: .light))
+                        .foregroundColor(.primary)
+                        .frame(width: 12, height: 12)
+                }
+                .help("Hotkey settings")
                 
                 Spacer()
                 

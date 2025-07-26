@@ -1,0 +1,110 @@
+//
+//  HotkeyManager.swift
+//  BarTap
+//
+
+import SwiftUI
+import Carbon
+
+/// A struct to hold all necessary information about a hotkey
+/// Codable conformance allows it to be easily saved to UserDefaults
+struct Hotkey: Codable, Equatable {
+    let keys: [String]
+    let keyCode: UInt32
+    let modifiers: UInt32
+    
+    // We need a custom Equatable check because NSEvent.ModifierFlags isn't directly Codable.
+    static func == (lhs: Hotkey, rhs: Hotkey) -> Bool {
+        return lhs.keyCode == rhs.keyCode && lhs.modifiers == rhs.modifiers
+    }
+}
+
+class GlobalHotkeyManager: ObservableObject {
+    private var hotkey: Hotkey?
+    private var hotKeyRef: EventHotKeyRef?
+    
+    private let userDefaultsKey = "appHotkey"
+    private let hotKeyId = EventHotKeyID(signature: "btap".fourCharCode, id: 1)
+    
+    // Hotkey event closure
+    var hotkeyEvent: (() -> Void)?
+    
+    /// Initialize the global event handler
+    func setup() {
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: OSType(kEventHotKeyPressed))
+        
+        // When hotket is pressed, call eventHandler() -> hotkeyEvent()
+        InstallEventHandler(GetApplicationEventTarget(), eventHandler, 1, &eventType, selfPtr, nil)
+    }
+    
+    deinit {
+        unregister()
+    }
+    
+    // MARK: - Registration
+    
+    /// Register a hotkey event
+    func register(hotkey: Hotkey?) {
+        guard let hotkey = hotkey else { return }
+        
+        unregister() // Unregister existing hotkey event
+        
+        // Registration
+        RegisterEventHotKey(hotkey.keyCode, hotkey.modifiers, hotKeyId, GetApplicationEventTarget(), 0, &hotKeyRef)
+        self.hotkey = hotkey
+    }
+    
+    /// Unregister a hotkey event
+    func unregister() {
+        if let hotKeyRef = hotKeyRef {
+            UnregisterEventHotKey(hotKeyRef)
+            self.hotKeyRef = nil
+        }
+    }
+    
+    // MARK: - Save and Load
+    
+    /// Persist hotkey to UserDefaults
+    func saveHotkey(_ hotkey: Hotkey?) {
+        guard let hotkeyToSave = hotkey else { return }
+        
+        // Persist to UserDefaults
+        if let data = try? JSONEncoder().encode(hotkeyToSave) {
+            UserDefaults.standard.set(data, forKey: userDefaultsKey)
+        }
+    }
+    
+    /// Load hotkey from UserDefaults
+    func loadHotkey() -> Hotkey? {
+        guard let data = UserDefaults.standard.data(forKey: userDefaultsKey),
+              let savedHotkey = try? JSONDecoder().decode(Hotkey.self, from: data) else {
+            return nil
+        }
+        
+        return savedHotkey
+    }
+}
+
+// MARK: - Event Handler
+
+private func eventHandler(eventHandlerCall: EventHandlerCallRef?, event: EventRef?, userData: UnsafeMutableRawPointer?) -> OSStatus {
+    guard let userData = userData else {
+        return noErr
+    }
+    
+    // Convert the raw pointer back to a GlobalHotkeyManager instance
+    let manager = Unmanaged<GlobalHotkeyManager>.fromOpaque(userData).takeUnretainedValue()
+    manager.hotkeyEvent?()
+    
+    return noErr
+}
+
+// MARK: - Extensions
+
+/// Convert a four-character string into the `OSType` format required by Carbon
+extension String {
+    var fourCharCode: FourCharCode {
+        return self.utf16.reduce(0, {$0 << 8 + FourCharCode($1)})
+    }
+}
