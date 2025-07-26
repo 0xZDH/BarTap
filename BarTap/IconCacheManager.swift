@@ -7,7 +7,11 @@ import SwiftUI
 import os
 
 class IconCacheManager {
-    static let state = IconCacheManager() // Shared state
+    static let state = IconCacheManager()
+    
+    // Keep recently-used icons in memory to avoid repeated
+    // `NSImage(contentsOfFile:)` disk hits
+    private let memoryCache = NSCache<NSString, NSImage>()
     
     private let fileManager = FileManager.default
     private var iconCacheDirectory: URL?
@@ -15,6 +19,7 @@ class IconCacheManager {
     
     private init() {
         setupCacheDirectory()
+        memoryCache.countLimit = 256 // Keep memory bounded
     }
     
     /// Set up the cache directory in the Application Support directory
@@ -91,9 +96,21 @@ class IconCacheManager {
         }
     }
     
-    /// Retrieves a cached icon from the filesystem
+    /// Retrieve a cached icon from the filesystem
     func getIcon(from path: String) -> NSImage? {
-        return NSImage(contentsOfFile: path)
+        // Attempt to retrieve the image from in-memory cache before
+        // requesting from on-disk
+        if let cachedImage = memoryCache.object(forKey: path as NSString) {
+            return cachedImage
+        }
+        
+        // Load the image from disk
+        guard let image = NSImage(contentsOfFile: path) else { return nil }
+        
+        // Save the image to in-memory cache once its been loaded from
+        // disk
+        memoryCache.setObject(image, forKey: path as NSString)
+        return image
     }
     
     /// Get the last modification date for a file at a given URL

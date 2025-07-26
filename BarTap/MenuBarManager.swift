@@ -30,6 +30,7 @@ class MenuBarManager: NSObject, ObservableObject {
         super.init()
         
         // Add observers to automatically refresh when apps are launched or quit
+        // Perform full rescans to monitor all app visibilities
         let notificationCenter = NSWorkspace.shared.notificationCenter
         notificationCenter.addObserver(
             self,
@@ -66,108 +67,6 @@ class MenuBarManager: NSObject, ObservableObject {
                 }
             }
         }
-    }
-}
-
-// MARK: - Private Helper Functions
-
-/// MenuBarManager extension to maintain private functions
-extension MenuBarManager {
-    /// Schedules a debounced refresh of the app list
-    /// This prevents multiple rapid refreshes when several apps launch or quit at once
-    @objc private func scheduleRefresh() {
-        refreshWorkItem?.cancel()
-        
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.refreshApps()
-        }
-        
-        refreshWorkItem = workItem
-        
-        // Debounce for 1 second to avoid excessive scanning
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
-    }
-    
-    /// Scan the menu bar for applications using the Accessibility API
-    private func scanForMenuBarApps() -> [MenuBarApp] {
-        var foundApps: [MenuBarApp] = []
-        let runningApps = NSWorkspace.shared.runningApplications
-        
-        // Calculate the frontmost app's menu boundary ONCE before the loop
-        // to avoid recalculating it for every single menu item
-        let appMenuBoundaryX = getActiveAppMenuBoundaryX()
-        
-        for app in runningApps {
-            guard app.activationPolicy == .accessory || app.activationPolicy == .regular else { continue }
-            
-            // Get the current application as an accessibility object and check for
-            // 'ExtrasMenuBar' as this was identified as denoting a 'menu bar icon'
-            let appElement = AXUIElementCreateApplication(app.processIdentifier)
-            
-            var extrasMenuBarRaw: AnyObject?
-            let extrasMenuBarResult = AXUIElementCopyAttributeValue(appElement, "AXExtrasMenuBar" as CFString, &extrasMenuBarRaw)
-            
-            if extrasMenuBarResult == .success, let extrasMenuBarValue = extrasMenuBarRaw {
-                //let extrasMenuBarElement = unsafeBitCast(extrasMenuBarValue, to: AXUIElement.self)
-                let extrasMenuBarElement = extrasMenuBarValue as! AXUIElement
-                
-                // Get the menu bar items for this app -> Some applications have several
-                // (e.g. Control Center)
-                var childrenRaw: AnyObject?
-                let childrenResult = AXUIElementCopyAttributeValue(extrasMenuBarElement, kAXChildrenAttribute as CFString, &childrenRaw)
-                
-                if childrenResult == .success, let children = childrenRaw as? [AXUIElement] {
-                    for child in children {
-                        var appTitle:    String
-                        var appIconPath: String?
-                        var appSFSymbol: String?
-                        
-                        if app.localizedName == "Control Center" {
-                            appTitle = getMenuBarItemName(child, appName: app.localizedName ?? "Unknown")
-                            appSFSymbol = getControlCenterIcon(appName: appTitle)
-                            
-                            // Check the cache first to avoid accessing tha app .icon if possible
-                            let appBundleId = app.bundleIdentifier ?? "unknown-cc-app"
-                            appIconPath = IconCacheManager.state.getCachedIcon(for: appBundleId, appURL: app.bundleURL)
-                            
-                            if appIconPath == nil, let appIcon = app.icon {
-                                appIconPath = IconCacheManager.state.cacheIcon(icon: appIcon, for: appBundleId, from: app.bundleURL)
-                            }
-                        } else {
-                            appTitle = app.localizedName ?? "Unknown"
-                            appSFSymbol = nil
-                            
-                            // Check the cache first to avoid accessing tha app .icon if possible
-                            let appBundleId = app.bundleIdentifier ?? "unknown-app"
-                            appIconPath = IconCacheManager.state.getCachedIcon(for: appBundleId, appURL: app.bundleURL)
-                            
-                            if appIconPath == nil, let appIcon = app.icon {
-                                appIconPath = IconCacheManager.state.cacheIcon(icon: appIcon, for: appBundleId, from: app.bundleURL)
-                            }
-                        }
-                        
-                        let appIsObscured = isMenuBarItemObscured(child, appMenuBoundaryX: appMenuBoundaryX)
-                        let appBundleId = getMenuBarBundleIdentifier(child, bundleIdentifier: app.bundleIdentifier ?? "unknown")
-                        
-                        var menuBarApp = MenuBarApp(
-                            id: UUID(),
-                            name: appTitle,
-                            bundleIdentifier: appBundleId,
-                            processIdentifier: app.processIdentifier,
-                            iconPath: appIconPath,
-                            sfSymbolName: appSFSymbol
-                        )
-                        
-                        // Store the accessibility element for later interaction
-                        menuBarApp.isObscured = appIsObscured
-                        menuBarApp.axElement = child
-                        foundApps.append(menuBarApp)
-                    }
-                }
-            }
-        }
-        
-        return foundApps
     }
     
     /// Handler to 'launch' a given application
@@ -224,5 +123,112 @@ extension MenuBarManager {
         if actionsResult == .success, let actions = actionsRaw as? [String] {
             logger.debug("Available actions for \(app.name): \(actions)")
         }
+    }
+}
+
+// MARK: - Private Helper Functions
+
+/// MenuBarManager extension to maintain private functions
+extension MenuBarManager {
+    /// Execute work synchronously on the main queue if we are not already there
+    @inline(__always)
+    private func onMain<T>(_ work: () -> T) -> T {
+        if Thread.isMainThread {
+            return work()
+        } else {
+            return DispatchQueue.main.sync(execute: work)
+        }
+    }
+    
+    // MARK: - Application Scanning Logic
+    
+    /// Schedules a debounced refresh of the app list
+    /// This prevents multiple rapid refreshes when several apps launch or quit at once
+    @objc private func scheduleRefresh() {
+        refreshWorkItem?.cancel()
+        
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.refreshApps()
+        }
+        
+        refreshWorkItem = workItem
+        
+        // Debounce for 1 second to avoid excessive scanning
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
+    }
+    
+    /// Scan the menu bar for applications using the Accessibility API
+    private func scanForMenuBarApps() -> [MenuBarApp] {
+        var foundApps: [MenuBarApp] = []
+        let runningApps = onMain { NSWorkspace.shared.runningApplications }
+        
+        // Calculate the frontmost app's menu boundary ONCE before the loop
+        // to avoid recalculating it for every single menu item
+        let appMenuBoundaryX = onMain { getActiveAppMenuBoundaryX() }
+        
+        for app in runningApps {
+            let policy = onMain { app.activationPolicy }
+            guard policy == .accessory || policy == .regular else { continue }
+            
+            // Get the current application as an accessibility object and check for
+            // 'ExtrasMenuBar' as this was identified as denoting a 'menu bar icon'
+            let appElement = onMain { AXUIElementCreateApplication(app.processIdentifier) }
+            
+            var extrasMenuBarRaw: AnyObject?
+            let result = AXUIElementCopyAttributeValue(appElement, "AXExtrasMenuBar" as CFString, &extrasMenuBarRaw)
+            guard result == .success, let raw = extrasMenuBarRaw,
+                  CFGetTypeID(raw) == AXUIElementGetTypeID() else { continue }
+            let extrasMenuBarElement = raw as! AXUIElement
+            
+            var childrenRaw: AnyObject?
+            let childrenResult = AXUIElementCopyAttributeValue(extrasMenuBarElement, kAXChildrenAttribute as CFString, &childrenRaw)
+            guard childrenResult == .success,
+                  let children = childrenRaw as? [AXUIElement] else { continue }
+            
+            for child in children {
+                // Nested release each application object as we iterate
+                autoreleasepool {
+                    // Pull all AppKit properties
+                    let localizedName = onMain { app.localizedName } ?? "Unknown"
+                    let bundleId      = onMain { app.bundleIdentifier } ?? "unknown-app"
+                    let bundleURL     = onMain { app.bundleURL }
+                    let appIcon       = onMain { app.icon }
+                    
+                    var appTitle      = localizedName
+                    var sfSymbolName: String? = nil
+                    var iconPath: String?     = nil
+                    
+                    if localizedName == "Control Center" {
+                        appTitle      = getMenuBarItemName(child, appName: localizedName)
+                        sfSymbolName  = getControlCenterIcon(appName: appTitle)
+                    }
+                    
+                    // Icon cache lookup/creation
+                    iconPath = IconCacheManager.state.getCachedIcon(for: bundleId, appURL: bundleURL)
+                    if iconPath == nil, let icon = appIcon {
+                        iconPath = IconCacheManager.state.cacheIcon(icon: icon, for: bundleId, from: bundleURL)
+                    }
+                    
+                    // Build the app model & append
+                    let obscured = isMenuBarItemObscured(child, appMenuBoundaryX: appMenuBoundaryX)
+                    let resolvedBundleId = getMenuBarBundleIdentifier(child, bundleIdentifier: bundleId)
+                    
+                    var model = MenuBarApp(
+                        id: UUID(),
+                        name: appTitle,
+                        bundleIdentifier: resolvedBundleId,
+                        processIdentifier: app.processIdentifier,
+                        iconPath: iconPath,
+                        sfSymbolName: sfSymbolName
+                    )
+                    
+                    model.isObscured = obscured
+                    model.axElement  = child
+                    foundApps.append(model)
+                }
+            }
+        }
+        
+        return foundApps
     }
 }

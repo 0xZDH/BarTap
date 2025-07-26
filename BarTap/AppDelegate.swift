@@ -116,11 +116,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             
             // Add an event monitor to detect clicks outside of the popover
             // (backup for .transient behavior)
-            // Only enable the event monitor when the popover is actively showing
-            eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) {
-                [weak self] event in
-                if let strongSelf = self, strongSelf.popover.isShown {
-                    strongSelf.closePopover()
+            if eventMonitor == nil {
+                eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) {
+                    [weak self] event in
+                    if let strongSelf = self, strongSelf.popover.isShown {
+                        strongSelf.closePopover()
+                    }
                 }
             }
         }
