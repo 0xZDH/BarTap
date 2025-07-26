@@ -16,8 +16,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var eventMonitor: Any?
     
     // Managers
-    private let menuBarManager = MenuBarManager()
     private let hotkeyManager = GlobalHotkeyManager()
+    private let menuBarManager = MenuBarManager()
+    private var applicationObserver: ApplicationObserver?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Mark application as accessory, do not show in dock
@@ -90,6 +91,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         if menuBarManager.detectedApps.isEmpty {
             menuBarManager.refreshApps()
         }
+        
+        // Initialize background overserver
+        applicationObserver = ApplicationObserver(manager: menuBarManager)
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {

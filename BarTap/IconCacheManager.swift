@@ -19,7 +19,9 @@ class IconCacheManager {
     
     private init() {
         setupCacheDirectory()
+        
         memoryCache.countLimit = 256 // Keep memory bounded
+        memoryCache.totalCostLimit = 32 * 32 * 4 * 256   // ≈1 MB
     }
     
     /// Set up the cache directory in the Application Support directory
@@ -109,7 +111,7 @@ class IconCacheManager {
         
         // Save the image to in-memory cache once its been loaded from
         // disk
-        memoryCache.setObject(image, forKey: path as NSString)
+        memoryCache.setObject(image, forKey: path as NSString, cost: 32*32*4)
         return image
     }
     
