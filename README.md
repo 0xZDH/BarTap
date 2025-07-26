@@ -97,6 +97,18 @@ When you run **BarTap** for the first time, macOS will ask for permissions.
 
 
 <div align="center">
+    <h3>Under the hood</h3>
+</div>
+
+**BarTap** attempts to keep its app list in sync without polling by combining two lightweight system hooks:
+
+- *NSWorkspace KVO*: **BarTap** observes the `runningApplications` key path to identify whenever a new process starts or an existing one disappears.
+- *Per-process DispatchSource*: When a new PID is detected, **BarTap** attaches a `DispatchSource.makeProcessSource` that fires the moment that specific process exits.
+
+**BarTap** originally observed the workspace for the *didLaunchApplicationNotification* and *didTerminateApplicationNotification* events, but these failed to capture events associated with `.accessory` applications.
+
+
+<div align="center">
     <h2>Contributing</h2>
 </div>
 
