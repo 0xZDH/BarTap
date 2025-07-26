@@ -48,6 +48,8 @@ class MenuBarManager: NSObject, ObservableObject {
         }
     }
     
+    // MARK: - App Interactions
+    
     /// Handler to 'launch' a given application
     func launchApp(_ app: MenuBarApp) {
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: app.bundleIdentifier) {
@@ -106,7 +108,7 @@ class MenuBarManager: NSObject, ObservableObject {
     
     /// Add app handler for background observation
     func addApp(_ app: NSRunningApplication) async {
-        let appMenuBoundaryX = onMain { getActiveAppMenuBoundaryX() }
+        let appMenuBoundaryX = onMain { getCachedAppMenuBoundaryX() }
         
         let children  = await Task.detached {
             self.createMenuBarApps(for: app, appMenuBoundaryX: appMenuBoundaryX)
@@ -120,23 +122,8 @@ class MenuBarManager: NSObject, ObservableObject {
     func removeApp(forPID pid: pid_t) {
         onMain { detectedApps.removeAll { $0.processIdentifier == pid } }
     }
-}
 
-// MARK: - Private Helper Functions
-
-/// MenuBarManager extension to maintain private functions
-extension MenuBarManager {
-    /// Execute work synchronously on the main queue if we are not already there
-    @inline(__always)
-    private func onMain<T>(_ work: () -> T) -> T {
-        if Thread.isMainThread {
-            return work()
-        } else {
-            return DispatchQueue.main.sync(execute: work)
-        }
-    }
-    
-    // MARK: - Application Scanning Logic
+    // MARK: - App Scanning
     
     /// Perform a full scan of the menu bar for applications using the Accessibility API
     private func scanForMenuBarApps() -> [MenuBarApp] {
@@ -145,7 +132,7 @@ extension MenuBarManager {
         
         // Calculate the frontmost app's menu boundary ONCE before the loop
         // to avoid recalculating it for every single menu item
-        let appMenuBoundaryX = onMain { getActiveAppMenuBoundaryX() }
+        let appMenuBoundaryX = onMain { getCachedAppMenuBoundaryX() }
         
         // Each app can have one or more child apps in the menu bar
         // (e.g. Control Center -> [WiFi, Sound, etc.])

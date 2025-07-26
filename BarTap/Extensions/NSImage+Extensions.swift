@@ -1,5 +1,5 @@
 //
-//  NSImageExtensions.swift
+//  NSImage+Extensions.swift
 //  BarTap
 //
 //  Source: https://gist.github.com/MaciejGad/11d8469b218817290ee77012edb46608
