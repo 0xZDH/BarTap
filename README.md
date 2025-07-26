@@ -100,12 +100,17 @@ When you run **BarTap** for the first time, macOS will ask for permissions.
     <h3>Under the hood</h3>
 </div>
 
-**BarTap** attempts to keep its app list in sync without polling by combining two lightweight system hooks:
+1. Background Monitoring
+    *   **NSWorkspace KVO**: Capture app launch/termination events by observing the `runningApplications` key path
+    *   **Per-PID DispatchSource Watchers**: Provide immediate process exit notifications by attaching `DispatchSource.makeProcessSource` to observed PIDs
 
-- *NSWorkspace KVO*: **BarTap** observes the `runningApplications` key path to identify whenever a new process starts or an existing one disappears.
-- *Per-process DispatchSource*: When a new PID is detected, **BarTap** attaches a `DispatchSource.makeProcessSource` that fires the moment that specific process exits.
+> **BarTap** originally observed the workspace for the *didLaunchApplicationNotification* and *didTerminateApplicationNotification* events, but these failed to capture events associated with `.accessory` applications.
 
-**BarTap** originally observed the workspace for the *didLaunchApplicationNotification* and *didTerminateApplicationNotification* events, but these failed to capture events associated with `.accessory` applications.
+2. Icon Caching
+    *   **Two-tier caching**: In-memory (NSCache) + on-disk cache
+    *   **Bounded memory usage**: 256 items, ~1MB limit
+    *   **Icon optimization**: Resize to 32x32 and convert to PNG
+    *   **Staleness detection**: Compare app modification dates to update cached icons
 
 
 <div align="center">
