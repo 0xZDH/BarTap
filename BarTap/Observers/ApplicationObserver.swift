@@ -62,13 +62,17 @@ class ApplicationObserver: ObservableObject {
     private func startWatching(_ pid: pid_t, seed: Bool = false) {
         guard let app = NSRunningApplication(processIdentifier: pid) else { return }
         
+        // Attempt to wait for the app to finish launching, but even if
+        // if .isFinishedLaunching never returns true - try to process
+        // the app anyway
+        Task { await app.waitForFinishedLaunching(timeout: 5.0) }
+        
         // When seeding, ignore 'adding' the apps to the BarTap manager
         // as this is handled by an initial full scan
         if !seed {
             knownPIDs.insert(pid)
             
             Task.detached(priority: .background) { [weak self] in
-                try? await Task.sleep(for: .seconds(1))  // Give the app a chance to start
                 if let self { await self.menuBarManager.addApp(app) }
             }
         }
