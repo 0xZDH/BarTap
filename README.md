@@ -117,13 +117,24 @@ When you run **BarTap** for the first time, macOS will ask for permissions.
     <h2>Known Issues</h2>
 </div>
 
-1. **Icon overlap**: When applications in the menu bar reach the Mac laptop camera notch, the first 'hidden' app is still within the visible frame, but just 'hidden'. As a result, if this application is clicked through **BarTap** it is forced forward which ends up causing overlaps if the focused application menu (File, Edit, Window, etc.) extend to where the icon exists.
+<div align="center">
+    <h3>Icon overlap</h3>
+</div>
+
+When applications in the menu bar reach the Mac laptop camera notch, the first 'hidden' app remains technically within the visible frame but is concealed by macOS's design to accommodate the notch. As a result, if this application is clicked through **BarTap**, it is forced forward, which ends up causing overlaps if the focused application menu (File, Edit, Window, etc.) extends to where the icon exists.
 
 <div align="center">
     <img src="Resources/issue-icon-overlap.png" height="45%" width="45%"></img>
 </div>
 
-> *A temporary fix for this is, once the user has completed using the applications menu, to move the icon back behind the camera notch (using command + left-click to drag the icon)*
+> *A temporary fix for this is, once the user has completed using the applications menu, to move the icon back behind the camera notch (using Cmd+left-click to drag the icon)*
+
+
+<div align="center">
+    <h3>Refreshing the app list</h3>
+</div>
+
+**BarTap** automatically monitors and updates its list of menu bar applications dynamically, which handles most scenarios. However, certain edge cases are not automatically detected, such as adding or removing Control Center sub-applications (Display, Focus, Sound, etc.). In these instances, the existing app list may become misaligned, causing simulated clicks to target incorrect applications. To resolve this issue, use the manual *Refresh* button to resynchronize the application list.
 
 
 <div align="center">
