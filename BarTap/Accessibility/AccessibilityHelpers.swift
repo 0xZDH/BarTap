@@ -158,6 +158,7 @@ func getControlCenterIcon(appName: String) -> String? {
 
 /// Check if a menu bar icon is either hidden from the layout OR obscured by the
 /// active app's menu
+/// NOTE: This is only working for app menu obscurity, not the Mac laptop camera notch
 func isMenuBarItemObscured(_ axElement: AXUIElement, appMenuBoundaryX: CGFloat?) -> Bool {
     // Get the frame of the icon itself
     guard let iconFrame = getElementFrame(axElement) else { return true }

@@ -100,7 +100,7 @@ struct PopoverView: View {
                 } else {
                     LazyVStack(spacing: 4) {
                         ForEach(filteredApps) { app in
-                            MenuBarAppRow(app: app, manager: menuBarManager, searchText: searchText)
+                            MenuBarAppRow(app: app, manager: menuBarManager, searchText: searchText, closePopover: closePopover)
                         }
                     }
                     .padding(.leading, 4)
@@ -169,6 +169,8 @@ struct MenuBarAppRow: View {
     let app: MenuBarApp
     let manager: MenuBarManager
     let searchText: String
+
+    let closePopover: () -> Void
     
     @State private var isHovered: Bool = false
     
@@ -176,6 +178,7 @@ struct MenuBarAppRow: View {
         // Define the entire row as a 'button'
         Button(action: {
             manager.clickMenuBarApp(app)
+            closePopover() // Attempt to force close
         }) {
             HStack {
                 // App icon

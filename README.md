@@ -92,12 +92,12 @@ When you run **BarTap** for the first time, macOS will ask for permissions.
 **BarTap** allows the user to register a global hotkey to toggle the popover view. By default, the hotkey is configured as `ctrl + shift + |`. Use the Hotkey Settings window to configure a custom hotkey.
 
 <div align="center">
-    <img src="Resources/BarTap-HotkeySettings.png" height="35%" width="35%"></img>
+    <img src="Resources/BarTap-HotkeySettings.png" height="40%" width="40%"></img>
 </div>
 
 
 <div align="center">
-    <h3>Under the hood</h3>
+    <h2>Under the Hood</h2>
 </div>
 
 1. Background Monitoring
@@ -111,6 +111,19 @@ When you run **BarTap** for the first time, macOS will ask for permissions.
     *   **Bounded memory usage**: 256 items, ~1MB limit
     *   **Icon optimization**: Resize to 32x32 and convert to PNG
     *   **Staleness detection**: Compare app modification dates to update cached icons
+
+
+<div align="center">
+    <h2>Known Issues</h2>
+</div>
+
+1. **Icon overlap**: When applications in the menu bar reach the Mac laptop camera notch, the first 'hidden' app is still within the visible frame, but just 'hidden'. As a result, if this application is clicked through **BarTap** it is forced forward which ends up causing overlaps if the focused application menu (File, Edit, Window, etc.) extend to where the icon exists.
+
+<div align="center">
+    <img src="Resources/issue-icon-overlap.png" height="45%" width="45%"></img>
+</div>
+
+> *A temporary fix for this is, once the user has completed using the applications menu, to move the icon back behind the camera notch (using command + left-click to drag the icon)*
 
 
 <div align="center">

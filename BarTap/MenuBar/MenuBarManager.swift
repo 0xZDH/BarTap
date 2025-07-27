@@ -108,10 +108,11 @@ class MenuBarManager: NSObject, ObservableObject {
     
     /// Add app handler for background observation
     func addApp(_ app: NSRunningApplication) async {
-        let appMenuBoundaryX = onMain { getCachedAppMenuBoundaryX() }
+        //let appMenuBoundaryX = onMain { getCachedAppMenuBoundaryX() }
         
         let children  = await Task.detached {
-            self.createMenuBarApps(for: app, appMenuBoundaryX: appMenuBoundaryX)
+            //self.createMenuBarApps(for: app, appMenuBoundaryX: appMenuBoundaryX)
+            self.createMenuBarApps(for: app, appMenuBoundaryX: nil)
         }.value
         
         onMain { detectedApps.removeAll { $0.processIdentifier == app.processIdentifier } }
@@ -132,13 +133,14 @@ class MenuBarManager: NSObject, ObservableObject {
         
         // Calculate the frontmost app's menu boundary ONCE before the loop
         // to avoid recalculating it for every single menu item
-        let appMenuBoundaryX = onMain { getCachedAppMenuBoundaryX() }
+        //let appMenuBoundaryX = onMain { getCachedAppMenuBoundaryX() }
         
         // Each app can have one or more child apps in the menu bar
         // (e.g. Control Center -> [WiFi, Sound, etc.])
         for app in runningApps {
             autoreleasepool {
-                let childApps = createMenuBarApps(for: app, appMenuBoundaryX: appMenuBoundaryX)
+                //let childApps = createMenuBarApps(for: app, appMenuBoundaryX: appMenuBoundaryX)
+                let childApps = createMenuBarApps(for: app, appMenuBoundaryX: nil)
                 foundApps.append(contentsOf: childApps)
             }
         }
@@ -193,7 +195,7 @@ class MenuBarManager: NSObject, ObservableObject {
                 }
                 
                 // Build the app model & append
-                let obscured = isMenuBarItemObscured(child, appMenuBoundaryX: appMenuBoundaryX)
+                //let obscured = isMenuBarItemObscured(child, appMenuBoundaryX: appMenuBoundaryX)
                 let resolvedBundleId = getMenuBarBundleIdentifier(child, bundleIdentifier: bundleId)
                 
                 var model = MenuBarApp(
@@ -205,7 +207,7 @@ class MenuBarManager: NSObject, ObservableObject {
                     sfSymbolName: sfSymbolName
                 )
                 
-                model.isObscured = obscured
+                //model.isObscured = obscured
                 model.axElement  = child
                 childApps.append(model)
             }
