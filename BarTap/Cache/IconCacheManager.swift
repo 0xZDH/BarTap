@@ -6,15 +6,47 @@
 import SwiftUI
 import os
 
+// MARK: - Cache Manager
+
 class IconCacheManager {
-    static let state = IconCacheManager() // Shared state
+    static let state = IconCacheManager()
+    
+    // Keep recently-used icons in memory to avoid repeated
+    // `NSImage(contentsOfFile:)` disk hits
+    private let memoryCache = NSCache<NSString, NSImage>()
     
     private let fileManager = FileManager.default
     private var iconCacheDirectory: URL?
+    private var iconCacheCleanupTimer: Timer?
+    private let iconCacheCleanupTimeout: Double = 300.0 // 5 minutes
+    
     private let logger = Logger(subsystem: "io.github.0xZDH.BarTap", category: "IconCacheManager")
     
     private init() {
         setupCacheDirectory()
+        
+        memoryCache.countLimit = 256 // Keep memory bounded
+        memoryCache.totalCostLimit = 32 * 32 * 4 * 256   // ≈1 MB
+        
+        // Set up periodic cleanup to prevent indefinite accumulation
+        setupCacheCleanupTimer()
+    }
+    
+    deinit {
+        iconCacheCleanupTimer?.invalidate()
+    }
+    
+    /// Set up periodic cache cleanup to prevent memory leaks
+    private func setupCacheCleanupTimer() {
+        // Clear in-memory cache after 5 minutes as this caching is
+        // primarily designed to minimize the on-disk reads during a
+        // given scan that has multiple applications using the same
+        // icon. Avoid keeping image cache in memory while BarTap sits
+        // idle in the background.
+        iconCacheCleanupTimer = Timer.scheduledTimer(withTimeInterval: iconCacheCleanupTimeout, repeats: true) {
+            [weak self] _ in
+            self?.memoryCache.removeAllObjects()
+        }
     }
     
     /// Set up the cache directory in the Application Support directory
@@ -91,9 +123,23 @@ class IconCacheManager {
         }
     }
     
-    /// Retrieves a cached icon from the filesystem
+    /// Retrieve a cached icon from the filesystem
     func getIcon(from path: String) -> NSImage? {
-        return NSImage(contentsOfFile: path)
+        let cacheKey = NSString(string: path) // Avoid repeated bridging
+        
+        // Attempt to retrieve the image from in-memory cache before
+        // requesting from on-disk
+        if let cachedImage = memoryCache.object(forKey: cacheKey) {
+            return cachedImage
+        }
+        
+        // Load the image from disk
+        guard let image = NSImage(contentsOfFile: path) else { return nil }
+        
+        // Save the image to in-memory cache once its been loaded from
+        // disk
+        memoryCache.setObject(image, forKey: cacheKey, cost: 32*32*4)
+        return image
     }
     
     /// Get the last modification date for a file at a given URL

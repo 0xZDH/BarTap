@@ -92,8 +92,49 @@ When you run **BarTap** for the first time, macOS will ask for permissions.
 **BarTap** allows the user to register a global hotkey to toggle the popover view. By default, the hotkey is configured as `ctrl + shift + |`. Use the Hotkey Settings window to configure a custom hotkey.
 
 <div align="center">
-    <img src="Resources/BarTap-HotkeySettings.png" height="35%" width="35%"></img>
+    <img src="Resources/BarTap-HotkeySettings.png" height="40%" width="40%"></img>
 </div>
+
+
+<div align="center">
+    <h2>Under the Hood</h2>
+</div>
+
+1. Background Monitoring
+    *   **NSWorkspace KVO**: Capture app launch/termination events by observing the `runningApplications` key path
+    *   **Per-PID DispatchSource Watchers**: Provide immediate process exit notifications by attaching `DispatchSource.makeProcessSource` to observed PIDs
+
+> **BarTap** originally observed the workspace for the *didLaunchApplicationNotification* and *didTerminateApplicationNotification* events, but these failed to capture events associated with `.accessory` applications.
+
+2. Icon Caching
+    *   **Two-tier caching**: In-memory (NSCache) + on-disk cache
+    *   **Bounded memory usage**: 256 items, ~1MB limit
+    *   **Icon optimization**: Resize to 32x32 and convert to PNG
+    *   **Staleness detection**: Compare app modification dates to update cached icons
+
+
+<div align="center">
+    <h2>Known Issues</h2>
+</div>
+
+<div align="center">
+    <h4>Icon overlap</h4>
+</div>
+
+When applications in the menu bar reach the Mac laptop camera notch, the first 'hidden' app remains technically within the visible frame but is concealed by macOS's design to accommodate the notch. As a result, if this application is clicked through **BarTap**, it is forced forward, which ends up causing overlaps if the focused application menu (File, Edit, Window, etc.) extends to where the icon exists.
+
+<div align="center">
+    <img src="Resources/issue-icon-overlap.png" height="45%" width="45%"></img>
+</div>
+
+> *A temporary fix for this is, once the user has completed using the applications menu, to move the icon back behind the camera notch (using Cmd+left-click to drag the icon)*
+
+
+<div align="center">
+    <h4>Refreshing the app list</h4>
+</div>
+
+**BarTap** automatically monitors and updates its list of menu bar applications dynamically, which handles most scenarios. However, certain edge cases are not automatically detected, such as adding or removing Control Center sub-applications (Display, Focus, Sound, etc.). In these instances, the existing app list may become misaligned, causing simulated clicks to target incorrect applications. To resolve this issue, use the manual *Refresh* button to resynchronize the application list.
 
 
 <div align="center">

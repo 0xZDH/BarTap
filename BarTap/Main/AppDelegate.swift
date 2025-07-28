@@ -16,8 +16,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var eventMonitor: Any?
     
     // Managers
-    private let menuBarManager = MenuBarManager()
     private let hotkeyManager = GlobalHotkeyManager()
+    private let menuBarManager = MenuBarManager()
+    private var applicationObserver: ApplicationObserver?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Mark application as accessory, do not show in dock
@@ -90,6 +91,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         if menuBarManager.detectedApps.isEmpty {
             menuBarManager.refreshApps()
         }
+        
+        // Initialize background overserver
+        applicationObserver = ApplicationObserver(manager: menuBarManager)
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {
@@ -116,11 +120,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             
             // Add an event monitor to detect clicks outside of the popover
             // (backup for .transient behavior)
-            // Only enable the event monitor when the popover is actively showing
-            eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) {
-                [weak self] event in
-                if let strongSelf = self, strongSelf.popover.isShown {
-                    strongSelf.closePopover()
+            if eventMonitor == nil {
+                eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) {
+                    [weak self] event in
+                    if let strongSelf = self, strongSelf.popover.isShown {
+                        strongSelf.closePopover()
+                    }
                 }
             }
         }

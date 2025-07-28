@@ -158,6 +158,7 @@ func getControlCenterIcon(appName: String) -> String? {
 
 /// Check if a menu bar icon is either hidden from the layout OR obscured by the
 /// active app's menu
+/// NOTE: This is only working for app menu obscurity, not the Mac laptop camera notch
 func isMenuBarItemObscured(_ axElement: AXUIElement, appMenuBoundaryX: CGFloat?) -> Bool {
     // Get the frame of the icon itself
     guard let iconFrame = getElementFrame(axElement) else { return true }
@@ -205,8 +206,27 @@ private func getElementFrame(_ axElement: AXUIElement) -> CGRect? {
     return CGRect(origin: position, size: size)
 }
 
+private var cachedAppMenuBoundaryX: CGFloat?
+private var boundaryXCacheTime: Date?
+private let boundaryXCacheInterval: TimeInterval = 2.0 // Cache for 2 seconds
+
+/// Attempt to first retrieve the app boundary from cache
+func getCachedAppMenuBoundaryX() -> CGFloat? {
+    let now = Date()
+    if let cacheTime = boundaryXCacheTime,
+       let cached = cachedAppMenuBoundaryX,
+       now.timeIntervalSince(cacheTime) < boundaryXCacheInterval {
+        return cached
+    }
+    
+    let boundary = onMain { getActiveAppMenuBoundaryX() }
+    cachedAppMenuBoundaryX = boundary
+    boundaryXCacheTime = now
+    return boundary
+}
+
 /// Find the rightmost coordinate (maxX) of the frontmost application's menu bar
-func getActiveAppMenuBoundaryX() -> CGFloat? {
+private func getActiveAppMenuBoundaryX() -> CGFloat? {
     // Get the frontmost application's accessibility element
     guard let frontmostApp = NSWorkspace.shared.frontmostApplication else { return nil }
     let appElement = AXUIElementCreateApplication(frontmostApp.processIdentifier)

@@ -5,6 +5,7 @@
 
 import SwiftUI
 import Carbon
+import os
 
 /// A struct to hold all necessary information about a hotkey
 /// Codable conformance allows it to be easily saved to UserDefaults
@@ -26,6 +27,8 @@ class GlobalHotkeyManager: ObservableObject {
     private let userDefaultsKey = "appHotkey"
     private let hotKeyId = EventHotKeyID(signature: "btap".fourCharCode, id: 1)
     
+    private let logger = Logger(subsystem: "io.github.0xZDH.BarTap", category: "GlobalHotkeyManager")
+    
     // Hotkey event closure
     var hotkeyEvent: (() -> Void)?
     
@@ -34,8 +37,11 @@ class GlobalHotkeyManager: ObservableObject {
         let selfPtr = Unmanaged.passUnretained(self).toOpaque()
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: OSType(kEventHotKeyPressed))
         
-        // When hotket is pressed, call eventHandler() -> hotkeyEvent()
-        InstallEventHandler(GetApplicationEventTarget(), eventHandler, 1, &eventType, selfPtr, nil)
+        // When hotkey is pressed, call eventHandler() -> hotkeyEvent()
+        let status = InstallEventHandler(GetApplicationEventTarget(), eventHandler, 1, &eventType, selfPtr, nil)
+        if status != noErr {
+            logger.error("InstallEventHandler failed with status \(status)")
+        }
     }
     
     deinit {
@@ -51,14 +57,23 @@ class GlobalHotkeyManager: ObservableObject {
         unregister() // Unregister existing hotkey event
         
         // Registration
-        RegisterEventHotKey(hotkey.keyCode, hotkey.modifiers, hotKeyId, GetApplicationEventTarget(), 0, &hotKeyRef)
-        self.hotkey = hotkey
+        let status = RegisterEventHotKey(hotkey.keyCode, hotkey.modifiers, hotKeyId, GetApplicationEventTarget(), 0, &hotKeyRef)
+        
+        if status == noErr {
+            self.hotkey = hotkey
+        } else {
+            logger.error("RegisterEventHotKey failed with status \(status)")
+        }
     }
     
     /// Unregister a hotkey event
     func unregister() {
         if let hotKeyRef = hotKeyRef {
-            UnregisterEventHotKey(hotKeyRef)
+            let status = UnregisterEventHotKey(hotKeyRef)
+            if status != noErr {
+                logger.warning("UnregisterEventHotKey returned status \(status)")
+            }
+            
             self.hotKeyRef = nil
         }
     }
