@@ -100,17 +100,23 @@ When you run **BarTap** for the first time, macOS will ask for permissions.
     <h2>Under the Hood</h2>
 </div>
 
-1. Background Monitoring
-    *   **NSWorkspace KVO**: Capture app launch/termination events by observing the `runningApplications` key path
-    *   **Per-PID DispatchSource Watchers**: Provide immediate process exit notifications by attaching `DispatchSource.makeProcessSource` to observed PIDs
+<div align="center">
+    <h4>Background monitoring</h4>
+</div>
+
+*   **NSWorkspace KVO**: Capture app launch/termination events by observing the `runningApplications` key path
+*   **Per-PID DispatchSource Watchers**: Provide immediate process exit notifications by attaching `DispatchSource.makeProcessSource` to observed PIDs
 
 > **BarTap** originally observed the workspace for the *didLaunchApplicationNotification* and *didTerminateApplicationNotification* events, but these failed to capture events associated with `.accessory` applications.
 
-2. Icon Caching
-    *   **Two-tier caching**: In-memory (NSCache) + on-disk cache
-    *   **Bounded memory usage**: 256 items, ~1MB limit
-    *   **Icon optimization**: Resize to 32x32 and convert to PNG
-    *   **Staleness detection**: Compare app modification dates to update cached icons
+<div align="center">
+    <h4>Icon caching</h4>
+</div>
+
+*   **Two-tier caching**: In-memory (NSCache) + on-disk cache
+*   **Bounded memory usage**: 256 items, ~1MB limit
+*   **Icon optimization**: Resize to 32x32 and convert to PNG
+*   **Staleness detection**: Compare app modification dates to update cached icons
 
 
 <div align="center">
