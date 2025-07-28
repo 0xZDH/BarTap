@@ -31,7 +31,7 @@ class MenuBarManager: NSObject, ObservableObject {
     }
     
     /// Public function to dispatch app scanning
-    func refreshApps() {
+    func refreshApps(completion: (() -> Void)? = nil) {
         isScanning  = true
         lastScannedDate = Date()
         
@@ -45,6 +45,9 @@ class MenuBarManager: NSObject, ObservableObject {
                 DispatchQueue.main.async { [weak self] in
                     self?.detectedApps = apps
                     self?.isScanning = false
+                    
+                    // If a completion function is provided, execute
+                    completion?()
                 }
             }
         }

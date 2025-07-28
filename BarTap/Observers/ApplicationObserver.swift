@@ -19,61 +19,46 @@ class ApplicationObserver: ObservableObject {
     init(manager: MenuBarManager) {
         self.menuBarManager = manager
         
-        // Seed existing apps on initialization
         seedKnownApps()
         
-        // Only observe deltas from now on
         cancellable = NSWorkspace.shared.observe(\.runningApplications, options: [.new, .old]) {
             [weak self] _, change in
-            self?.handleWorkspaceDelta(change)
+            
+            guard let newApps = change.newValue else { return }
+            
+            let newAppsSet = Set(newApps.map(\.processIdentifier)) // Get PIDs only
+            newAppsSet.forEach { pid in self?.startWatching(pid) }
         }
     }
     
-    /// Get a list of current running accessory applications
-    private func currentApps() -> Set<pid_t> {
-        Set(NSWorkspace.shared.runningApplications.map(\.processIdentifier))
-    }
-    
-    /// Initial seeding of accessory apps
+    /// Initial seeding of known apps
     private func seedKnownApps() {
-        // Get initial baseline of 'all' PIDs
-        knownPIDs = currentApps()
+        // Get a baseline of 'all known' PIDs
+        knownPIDs = Set(NSWorkspace.shared.runningApplications.map(\.processIdentifier))
         
-        menuBarManager.detectedApps.map(\.processIdentifier).forEach {
-            pid in startWatching(pid, seed: true)
+        // Start monitoring known menu bar applications only
+        // if we have detected apps (avoid race conditions with initial scan)
+        if !menuBarManager.detectedApps.isEmpty {
+            menuBarManager.detectedApps.map(\.processIdentifier).forEach { [weak self] pid in
+                self?.startWatching(pid, seed: true)
+            }
         }
-    }
-    
-    /// Running application delta to identify new/removed applications
-    private func handleWorkspaceDelta(_ change: NSKeyValueObservedChange<[NSRunningApplication]>) {
-        // Get a snapshot of all accessory apps
-        let current = currentApps()
-        
-        // Diff the snapshot with observed accessory apps
-        let launched = current.subtracting(knownPIDs)
-        let gone     = knownPIDs.subtracting(current)
-        
-        // Propagate the changes
-        launched.forEach { pid in startWatching(pid) }
-        gone.forEach     { pid in stopWatching(pid)  }
     }
     
     /// Start monitoring a new accessory app
     private func startWatching(_ pid: pid_t, seed: Bool = false) {
-        guard let app = NSRunningApplication(processIdentifier: pid) else { return }
-        
-        // Attempt to wait for the app to finish launching, but even if
-        // if .isFinishedLaunching never returns true - try to process
-        // the app anyway
-        Task { await app.waitForFinishedLaunching(timeout: 5.0) }
-        
-        // When seeding, ignore 'adding' the apps to the BarTap manager
-        // as this is handled by an initial full scan
+        // When seeding, skip 'handling' the known apps to the BarTap manager
         if !seed {
+            guard let app = NSRunningApplication(processIdentifier: pid) else { return }
+            
             knownPIDs.insert(pid)
             
             Task.detached(priority: .background) { [weak self] in
-                if let self { await self.menuBarManager.addApp(app) }
+                // Attempt to wait for the app to finish launching, but even if
+                // .isFinishedLaunching never returns true - try to process the
+                // app anyway
+                await app.waitForFinishedLaunching(timeout: 5.0)
+                await self?.menuBarManager.addApp(app)
             }
         }
         
@@ -83,9 +68,9 @@ class ApplicationObserver: ObservableObject {
         src.setEventHandler { [weak self] in
             self?.stopWatching(pid)
         }
-        src.resume()
         
-        pidWatchers[pid] = src
+        pidWatchers[pid] = src // Track watchers for later cleanup
+        src.resume()
     }
     
     /// Remove stopped accessory app from monitoring
@@ -93,8 +78,7 @@ class ApplicationObserver: ObservableObject {
         // Make handler idempotent
         guard knownPIDs.remove(pid) != nil else { return }
         
-        menuBarManager.removeApp(forPID: pid)
-        
-        pidWatchers.removeValue(forKey: pid)?.cancel()
+        menuBarManager.removeApp(forPID: pid) // Stop tracking the app
+        pidWatchers.removeValue(forKey: pid)?.cancel() // Cancel the watcher
     }
 }
