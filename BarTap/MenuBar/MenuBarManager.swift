@@ -36,13 +36,15 @@ class MenuBarManager: NSObject, ObservableObject {
         lastScannedDate = Date()
         
         // Async dispatch to scan applications in the background
-        DispatchQueue.global(qos: .background).async {
+        // Use weak self to prevent retain cycles on complete refresh
+        DispatchQueue.global(qos: .background).async { [weak self] in
             autoreleasepool {
+                guard let self = self else { return }
                 let apps = self.scanForMenuBarApps()
                 
-                DispatchQueue.main.async {
-                    self.detectedApps = apps
-                    self.isScanning = false
+                DispatchQueue.main.async { [weak self] in
+                    self?.detectedApps = apps
+                    self?.isScanning = false
                 }
             }
         }
