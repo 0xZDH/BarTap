@@ -89,11 +89,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         
         // On application load, perform initial app scan
         if menuBarManager.detectedApps.isEmpty {
-            menuBarManager.refreshApps()
+            menuBarManager.refreshApps { [weak self] in
+                // Initialize background observer
+                guard let self = self else { return }
+                self.applicationObserver = ApplicationObserver(manager: self.menuBarManager)
+            }
+        } else {
+            // If we already have apps (which shouldn't happen on first launch),
+            // initialize observer immediately
+            applicationObserver = ApplicationObserver(manager: menuBarManager)
         }
-        
-        // Initialize background overserver
-        applicationObserver = ApplicationObserver(manager: menuBarManager)
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {

@@ -120,7 +120,7 @@ When you run **BarTap** for the first time, macOS will ask for permissions.
 
 
 <div align="center">
-    <h2>Known Issues</h2>
+    <h2>Known Issues and Limitations</h2>
 </div>
 
 <div align="center">
@@ -141,6 +141,10 @@ When applications in the menu bar reach the Mac laptop camera notch, the first '
 </div>
 
 **BarTap** automatically monitors and updates its list of menu bar applications dynamically, which handles most scenarios. However, certain edge cases are not automatically detected, such as adding or removing Control Center sub-applications (Display, Focus, Sound, etc.). In these instances, the existing app list may become misaligned, causing simulated clicks to target incorrect applications. To resolve this issue, use the manual *Refresh* button to resynchronize the application list.
+
+Some applications with longer startup times (like Rancher Desktop) may not be automatically detected if their menu bar component launches with a delay. While this could theoretically be resolved by waiting for the menu bar application to appear, there's no reliable way to determine which applications will have menu bar components. Implementing such a waiting mechanism would cause **BarTap** to experience significant delays and unnecessary background processing. If an application launches but doesn't appear in the **BarTap** menu, simply use the manual *Refresh* button to resynchronize the application list.
+
+> If you observe any app anomalies or incorrect data in the **BarTap** window, perform a manual refresh to reset the data.
 
 
 <div align="center">

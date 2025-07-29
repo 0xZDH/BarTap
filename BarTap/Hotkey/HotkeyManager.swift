@@ -114,12 +114,3 @@ private func eventHandler(eventHandlerCall: EventHandlerCallRef?, event: EventRe
     
     return noErr
 }
-
-// MARK: - Extensions
-
-/// Convert a four-character string into the `OSType` format required by Carbon
-extension String {
-    var fourCharCode: FourCharCode {
-        return self.utf16.reduce(0, {$0 << 8 + FourCharCode($1)})
-    }
-}
