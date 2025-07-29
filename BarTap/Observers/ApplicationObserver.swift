@@ -38,6 +38,8 @@ class ApplicationObserver: ObservableObject {
         
         // Start monitoring known menu bar applications only
         // if we have detected apps (avoid race conditions with initial scan)
+        // Avoid 'monitoring' all running applications at launch since we know
+        // they do not all have menu bar applications
         if !menuBarManager.detectedApps.isEmpty {
             menuBarManager.detectedApps.map(\.processIdentifier).forEach { [weak self] pid in
                 self?.startWatching(pid, seed: true)
@@ -58,6 +60,10 @@ class ApplicationObserver: ObservableObject {
                 // .isFinishedLaunching never returns true - try to process the
                 // app anyway
                 await app.waitForFinishedLaunching(timeout: 5.0)
+                
+                // Force wait for an application to finish its launch sequence
+                //try await Task.sleep(nanoseconds: 15_000_000_000) // wait for 15 seconds
+                
                 await self?.menuBarManager.addApp(app)
             }
         }
